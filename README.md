@@ -10,7 +10,7 @@ Early development. Targets ONF **0.2.0**, which is a pre-release version without
 
 | Component | State |
 |---|---|
-| `onf/` read side | in progress |
+| `onf/` read side | started: build setup, error and diagnostics types, limits; no parser yet |
 | `reader/` | planned (command line first) |
 | `onf/` write side | planned |
 | `writer/` | planned |
@@ -21,15 +21,24 @@ The initial goal is a **Minimal Reader** as defined in section 11.3 of the speci
 
 ```
 onf-tools/
-├── onf/        Format layer: model, primitives, container, parser, serializer
-├── reader/     Viewer application, depends only on onf/
-├── writer/     Writer application, depends only on onf/
+├── CMakeLists.txt
+├── CMakePresets.json
+├── onf/            Format layer
+│   ├── include/onf/    Public headers
+│   └── src/
+├── reader/         Viewer application, depends only on onf/ (planned)
+├── writer/         Writer application, depends only on onf/ (planned)
 ├── tests/
-│   ├── vectors/    Varint and zigzag test vectors from Appendix A
-│   └── fixtures/   Valid and deliberately malformed ONF files
+│   ├── unit/           Unit tests for onf/ (doctest)
+│   ├── vectors/        Varint and zigzag test vectors from Appendix A (planned)
+│   └── fixtures/       Valid and deliberately malformed ONF files (planned)
+├── third_party/
+│   └── doctest/        Vendored test framework (MIT)
 ├── LICENSE
 └── README.md
 ```
+
+The format layer will be split into model, primitives, container and parser as it grows.
 
 ### Design rules
 
@@ -54,11 +63,19 @@ Not in scope for the first milestone: text rendering, embedded assets, backgroun
 
 ## Getting started
 
-Not yet available. Build and usage instructions will be added once there is something to run.
+Requirements: CMake 3.25 or newer, Ninja and a C++20 compiler (GCC or Clang). The `asan-ubsan` preset also needs the AddressSanitizer and UndefinedBehaviorSanitizer runtimes of the compiler (on Fedora with GCC: `libasan` and `libubsan`).
+
+```bash
+cmake --preset debug
+cmake --build --preset debug
+ctest --preset debug
+```
+
+Use the preset `asan-ubsan` instead of `debug` to build and run the tests with both sanitizers. There is nothing to run besides the tests yet.
 
 ## Testing
 
-The test suite is built around two things:
+Unit tests for `onf/` live in `tests/unit`. The planned test suite is built around two more things:
 
 1. The canonical varint and zigzag vectors from Appendix A of the specification.
 2. A set of malformed files, one per failure case listed in section 12.3 of the specification (bad magic bytes, truncated chunk, non-terminating varint, duplicate page order, path traversal in the archive, and so on).
