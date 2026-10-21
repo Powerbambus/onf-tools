@@ -10,7 +10,7 @@ Early development. Targets ONF **0.2.0**, which is a pre-release version without
 
 | Component | State |
 |---|---|
-| `onf/` read side | started: build setup, error and diagnostics types, limits; no parser yet |
+| `onf/` read side | started: build setup, error and diagnostics types, limits, byte cursor; no parser yet |
 | `reader/` | planned (command line first) |
 | `onf/` write side | planned |
 | `writer/` | planned |
@@ -24,7 +24,7 @@ onf-tools/
 ├── CMakeLists.txt
 ├── CMakePresets.json
 ├── onf/            Format layer
-│   ├── include/onf/    Public headers
+│   ├── include/onf/    Public headers (primitives/ holds the byte cursor)
 │   └── src/
 ├── reader/         Viewer application, depends only on onf/ (planned)
 ├── writer/         Writer application, depends only on onf/ (planned)
