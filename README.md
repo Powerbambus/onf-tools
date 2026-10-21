@@ -1,0 +1,78 @@
+# onf-tools
+
+Reader and writer tools for the [OpenNotes Format (ONF)](https://github.com/Powerbambus/open-notes-format/), an open, vendor-neutral file format for handwritten digital notes.
+
+This repository exists to test the specification against independent implementations. It is not a finished product.
+
+## Status
+
+Early development. Targets ONF **0.2.0**, which is a pre-release version without stability guarantees.
+
+| Component | State |
+|---|---|
+| `onf/` read side | in progress |
+| `reader/` | planned (command line first) |
+| `onf/` write side | planned |
+| `writer/` | planned |
+
+The initial goal is a **Minimal Reader** as defined in section 11.3 of the specification. A Full Reader and a Conforming Writer follow later.
+
+## Layout
+
+```
+onf-tools/
+├── onf/        Format layer: model, primitives, container, parser, serializer
+├── reader/     Viewer application, depends only on onf/
+├── writer/     Writer application, depends only on onf/
+├── tests/
+│   ├── vectors/    Varint and zigzag test vectors from Appendix A
+│   └── fixtures/   Valid and deliberately malformed ONF files
+├── LICENSE
+└── README.md
+```
+
+### Design rules
+
+- `onf/` knows nothing about rendering, GUIs, or the applications built on it. It has no global state and does not print.
+- `reader/` and `writer/` depend on `onf/` and never on each other.
+- `onf/` must be testable without `reader/` or `writer/`.
+- `onf/` reports problems in two ways: **errors** for malformed files (the spec requires aborting) and **diagnostics** for events the host application must handle (version mismatch, font substitution, missing asset). It never decides on behalf of the application.
+
+The separation is intentional. If the format layer proves useful, it can be extracted into a standalone library after ONF 1.0.0 without rewriting the applications.
+
+## Scope
+
+In scope for the first milestone:
+
+- Opening the ZIP container with path and size validation (spec 4.6, 4.7)
+- Parsing `manifest.json`, `meta.json` and `strokes.bin`
+- Varint and zigzag decoding, checked against the Appendix A vectors
+- Forward compatibility rules (unknown keys, chunks, flags, enum values)
+- Exporting a page as an image to check the parsed strokes visually
+
+Not in scope for the first milestone: text rendering, embedded assets, background patterns, highlighter blending, line eraser masking.
+
+## Getting started
+
+Not yet available. Build and usage instructions will be added once there is something to run.
+
+## Testing
+
+The test suite is built around two things:
+
+1. The canonical varint and zigzag vectors from Appendix A of the specification.
+2. A set of malformed files, one per failure case listed in section 12.3 of the specification (bad magic bytes, truncated chunk, non-terminating varint, duplicate page order, path traversal in the archive, and so on).
+
+The fixtures are language-independent and may move to the specification repository later, so that every implementation can test against the same files.
+
+## Relationship to the specification
+
+The specification is the source of truth. If an implementation and the specification disagree, the specification is read again first. Findings from this repository that point to unclear or contradictory wording are reported as issues against the specification repository.
+
+## Contributing
+
+Issues and pull requests are welcome. Please read the specification section that your change touches and reference it in the description.
+
+## License
+
+AGPL-3.0. See `LICENSE`.
