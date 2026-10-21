@@ -1,0 +1,7 @@
+# CMake / build output
+build/
+cmake-build-*/
+.cache/
+
+# IDE files
+.idea/
