@@ -1,6 +1,7 @@
 add_executable(onf_tests
     unit/main.cpp
     unit/test_build.cpp
+    unit/test_bytecursor.cpp
     unit/test_result.cpp
     unit/test_errors.cpp
     unit/test_diagnostics.cpp
