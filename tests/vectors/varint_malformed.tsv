@@ -1,0 +1,7 @@
+# bytes	field	error
+80 00	any	varint_not_canonical
+81 80 00	any	varint_not_canonical
+80 80 80 80 20	any	varint_out_of_range
+80 80 80 80 10	timestamp	varint_out_of_range
+80 80 80 80 80	any	varint_too_long
+80	any	varint_truncated

@@ -1,6 +1,7 @@
 add_library(onf STATIC
     src/errors.cpp
     src/primitives/bytecursor.cpp
+    src/primitives/varint.cpp
 )
 add_library(onf::onf ALIAS onf)
 
