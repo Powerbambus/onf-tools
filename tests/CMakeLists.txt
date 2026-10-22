@@ -5,6 +5,7 @@ add_executable(onf_tests
     unit/test_result.cpp
     unit/test_errors.cpp
     unit/test_diagnostics.cpp
+    unit/test_json.cpp
     unit/test_limits.cpp
     unit/test_stroke_parser.cpp
     unit/test_strokes_file.cpp

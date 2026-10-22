@@ -2,6 +2,7 @@ add_library(onf STATIC
     src/errors.cpp
     src/primitives/bytecursor.cpp
     src/primitives/varint.cpp
+    src/read/json.cpp
     src/read/stroke_parser.cpp
     src/read/strokes_file.cpp
 )
