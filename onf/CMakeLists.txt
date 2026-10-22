@@ -9,9 +9,11 @@ add_library(onf STATIC
     src/primitives/varint.cpp
     src/read/json.cpp
     src/read/manifest.cpp
+    src/read/page_meta.cpp
     src/read/stroke_parser.cpp
     src/read/strokes_file.cpp
     src/read/values.cpp
+    src/read/version_policy.cpp
 )
 add_library(onf::onf ALIAS onf)
 

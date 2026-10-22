@@ -1,6 +1,7 @@
 #pragma once
 
 #include <cstdint>
+#include <string>
 
 namespace onf {
 
@@ -11,5 +12,9 @@ struct Version {
 
     friend bool operator==(const Version&, const Version&) = default;
 };
+
+inline std::string to_string(const Version& v) {
+    return std::to_string(v.major) + "." + std::to_string(v.minor) + "." + std::to_string(v.patch);
+}
 
 }  // namespace onf

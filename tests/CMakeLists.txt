@@ -8,6 +8,7 @@ add_executable(onf_tests
     unit/test_json.cpp
     unit/test_limits.cpp
     unit/test_manifest.cpp
+    unit/test_page_meta.cpp
     unit/test_paths.cpp
     unit/test_real_archives.cpp
     unit/test_stroke_parser.cpp
@@ -17,6 +18,7 @@ add_executable(onf_tests
     unit/test_values.cpp
     unit/test_zip_archive.cpp
     unit/test_varint.cpp
+    unit/test_version_policy.cpp
 )
 target_link_libraries(onf_tests PRIVATE onf::onf ZLIB::ZLIB)
 target_include_directories(onf_tests PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
