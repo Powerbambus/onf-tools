@@ -2,6 +2,7 @@ add_library(onf STATIC
     src/errors.cpp
     src/primitives/bytecursor.cpp
     src/primitives/varint.cpp
+    src/read/strokes_file.cpp
 )
 add_library(onf::onf ALIAS onf)
 
