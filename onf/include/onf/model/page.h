@@ -3,7 +3,9 @@
 #include <cstdint>
 #include <optional>
 #include <string>
+#include <vector>
 
+#include "onf/model/stroke.h"
 #include "onf/model/types.h"
 
 namespace onf {
@@ -23,6 +25,13 @@ struct PageMeta {
     Coord width = 0;   // always positive
     Coord height = 0;  // always positive
     Background background;
+};
+
+// One fully read page: strokes in the order of the file.
+struct Page {
+    std::string id;
+    PageMeta meta;
+    std::vector<Stroke> strokes;
 };
 
 }  // namespace onf

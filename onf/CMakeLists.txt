@@ -7,6 +7,7 @@ add_library(onf STATIC
     src/primitives/bytecursor.cpp
     src/primitives/utf8.cpp
     src/primitives/varint.cpp
+    src/read/document.cpp
     src/read/json.cpp
     src/read/manifest.cpp
     src/read/page_meta.cpp
