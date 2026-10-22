@@ -8,6 +8,7 @@ add_library(onf STATIC
     src/primitives/utf8.cpp
     src/primitives/varint.cpp
     src/read/json.cpp
+    src/read/manifest.cpp
     src/read/stroke_parser.cpp
     src/read/strokes_file.cpp
     src/read/values.cpp

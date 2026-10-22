@@ -10,7 +10,7 @@ Early development. Targets ONF **0.2.0**, which is a pre-release version without
 
 | Component | State |
 |---|---|
-| `onf/` read side | started: build setup, error and diagnostics types, limits, byte cursor, varint and zigzag decoding, value types, strokes.bin parsing (header, chunks, strokes, samples), strict JSON parser, color/version/date parsers, entry name and identifier checks, ZIP container with all checks of spec 4; no manifest or page loading yet |
+| `onf/` read side | started: build setup, error and diagnostics types, limits, byte cursor, varint and zigzag decoding, value types, strokes.bin parsing (header, chunks, strokes, samples), strict JSON parser, color/version/date parsers, entry name and identifier checks, ZIP container with all checks of spec 4, manifest parsing; no version policy, page loading or document API yet |
 | `reader/` | planned (command line first) |
 | `onf/` write side | planned |
 | `writer/` | planned |
@@ -24,7 +24,7 @@ onf-tools/
 ├── CMakeLists.txt
 ├── CMakePresets.json
 ├── onf/            Format layer
-│   ├── include/onf/    Public headers (primitives/: byte cursor, varint, UTF-8; model/: value types; read/: strokes.bin and JSON parsers; container/: ZIP archive and entry name checks)
+│   ├── include/onf/    Public headers (primitives/: byte cursor, varint, UTF-8; model/: value types; read/: strokes.bin, JSON and manifest parsers; container/: ZIP archive and entry name checks)
 │   └── src/
 ├── reader/         Viewer application, depends only on onf/ (planned)
 ├── writer/         Writer application, depends only on onf/ (planned)
@@ -32,7 +32,7 @@ onf-tools/
 │   ├── unit/           Unit tests for onf/ (doctest)
 │   ├── support/        Test-only helpers (varint encoder, vector loader)
 │   ├── vectors/        Varint and zigzag test vectors from Appendix A, extracted from the spec
-│   └── fixtures/       Valid and deliberately malformed ONF files (planned)
+│   └── fixtures/       Archives written by other tools (real_archives/); malformed ONF files are planned
 ├── third_party/
 │   └── doctest/        Vendored test framework (MIT)
 ├── LICENSE

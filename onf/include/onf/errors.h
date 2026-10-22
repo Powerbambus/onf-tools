@@ -46,6 +46,7 @@ namespace onf {
     X(MetaInvalidField,         306, "meta_invalid_field",         "6.2.2")            \
     X(BackgroundInvalidField,   307, "background_invalid_field",   "6.3.1")            \
     X(VersionRejected,          308, "version_rejected",           "10.3")             \
+    X(ManifestTooLarge,         309, "manifest_too_large",         "12.6")             \
     /* 4xx: strokes.bin */                                                             \
     X(StrokesTooShort,          401, "strokes_too_short",          "7.2")              \
     X(StrokesBadMagic,          402, "strokes_bad_magic",          "7.2")              \

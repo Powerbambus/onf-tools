@@ -7,7 +7,9 @@ add_executable(onf_tests
     unit/test_diagnostics.cpp
     unit/test_json.cpp
     unit/test_limits.cpp
+    unit/test_manifest.cpp
     unit/test_paths.cpp
+    unit/test_real_archives.cpp
     unit/test_stroke_parser.cpp
     unit/test_strokes_file.cpp
     unit/test_types.cpp
@@ -18,7 +20,8 @@ add_executable(onf_tests
 )
 target_link_libraries(onf_tests PRIVATE onf::onf ZLIB::ZLIB)
 target_include_directories(onf_tests PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
-target_compile_definitions(onf_tests PRIVATE ONF_VECTORS_DIR="${PROJECT_SOURCE_DIR}/tests/vectors")
+target_compile_definitions(onf_tests PRIVATE ONF_VECTORS_DIR="${PROJECT_SOURCE_DIR}/tests/vectors"
+                                             ONF_FIXTURES_DIR="${PROJECT_SOURCE_DIR}/tests/fixtures")
 target_include_directories(onf_tests SYSTEM PRIVATE ${PROJECT_SOURCE_DIR}/third_party/doctest)
 
 if(ONF_SANITIZE)

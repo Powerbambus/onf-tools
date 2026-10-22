@@ -20,6 +20,9 @@ static_assert(kRatioCheckMinSize == (1ull << 20));
 // 4.2, 6.1.2
 inline constexpr std::uint32_t kMaxPages = 99999;
 
+// Project decision: spec 12.6 allows stricter limits on the file size. 99999 pages need about 5 MB.
+inline constexpr std::uint64_t kMaxManifestSize = 16ull * 1024 * 1024;
+
 // 12.6, counted in code points
 inline constexpr std::uint32_t kJsonMaxDepth = 32;                   // top-level value has depth 1
 inline constexpr std::uint32_t kJsonMaxStringCodePoints = 65535;

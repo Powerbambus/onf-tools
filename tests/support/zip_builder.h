@@ -15,9 +15,9 @@ inline void append_u64(Bytes& out, std::uint64_t v) {
     for (unsigned i = 0; i < 8; ++i) out.push_back(static_cast<std::uint8_t>(v >> (8 * i)));
 }
 
-inline Bytes deflate_raw(const Bytes& data) {
+inline Bytes deflate_raw(const Bytes& data, int level = 9) {
     z_stream stream{};
-    deflateInit2(&stream, 9, Z_DEFLATED, -15, 8, Z_DEFAULT_STRATEGY);
+    deflateInit2(&stream, level, Z_DEFLATED, -15, 8, Z_DEFAULT_STRATEGY);
     Bytes out(deflateBound(&stream, static_cast<uLong>(data.size())) + 16);
     stream.next_in = const_cast<Bytef*>(data.data());
     stream.avail_in = static_cast<uInt>(data.size());
@@ -37,6 +37,7 @@ struct ZipEntrySpec {
     std::string name;
     Bytes data;
     std::uint16_t method = 0;  // 0 stored, 8 deflate, anything else stores the data unchanged
+    int deflate_level = 9;
     std::uint16_t flags = 0;
     std::uint32_t external_attributes = 0;
     std::uint8_t host = 3;  // 3 = Unix
@@ -63,7 +64,7 @@ inline Bytes build_zip(const ZipSpec& spec) {
     Bytes directory;
 
     for (const ZipEntrySpec& e : spec.entries) {
-        Bytes payload = e.method == 8 ? deflate_raw(e.data) : e.data;
+        Bytes payload = e.method == 8 ? deflate_raw(e.data, e.deflate_level) : e.data;
         payload.insert(payload.end(), e.extra_payload_bytes, 0);
 
         const std::uint64_t size = e.declared_size.value_or(e.data.size());
