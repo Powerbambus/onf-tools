@@ -26,6 +26,7 @@ namespace onf {
     X(EntrySizeLimitExceeded,   110, "entry_size_limit_exceeded",  "4.7")              \
     X(TotalSizeLimitExceeded,   111, "total_size_limit_exceeded",  "4.7")              \
     X(CompressionRatioExceeded, 112, "compression_ratio_exceeded", "4.7")              \
+    X(ZipReadFailed,            113, "zip_read_failed",            "4.1")              \
     /* 2xx: JSON */                                                                    \
     X(JsonSyntax,               201, "json_syntax",                "2.3.5")            \
     X(JsonInvalidUtf8,          202, "json_invalid_utf8",          "2.3.5")            \

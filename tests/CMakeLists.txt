@@ -13,9 +13,10 @@ add_executable(onf_tests
     unit/test_types.cpp
     unit/test_utf8.cpp
     unit/test_values.cpp
+    unit/test_zip_archive.cpp
     unit/test_varint.cpp
 )
-target_link_libraries(onf_tests PRIVATE onf::onf)
+target_link_libraries(onf_tests PRIVATE onf::onf ZLIB::ZLIB)
 target_include_directories(onf_tests PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
 target_compile_definitions(onf_tests PRIVATE ONF_VECTORS_DIR="${PROJECT_SOURCE_DIR}/tests/vectors")
 target_include_directories(onf_tests SYSTEM PRIVATE ${PROJECT_SOURCE_DIR}/third_party/doctest)

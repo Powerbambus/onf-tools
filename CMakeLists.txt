@@ -21,6 +21,10 @@ if(ONF_SANITIZE)
     add_link_options(-fsanitize=address,undefined)
 endif()
 
+find_library(LIBZIP_LIBRARY NAMES zip REQUIRED)
+find_path(LIBZIP_INCLUDE_DIR NAMES zip.h REQUIRED)
+find_package(ZLIB REQUIRED)
+
 add_subdirectory(onf)
 
 if(ONF_BUILD_TESTS)
