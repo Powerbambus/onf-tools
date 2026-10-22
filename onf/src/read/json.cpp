@@ -5,6 +5,7 @@
 #include <unordered_set>
 
 #include "onf/limits.h"
+#include "onf/primitives/utf8.h"
 
 namespace onf {
 
@@ -318,33 +319,10 @@ private:
         }
     }
 
-    // Copies one multi-byte UTF-8 sequence if it is well-formed (no overlong forms, no surrogates, at most U+10FFFF).
     bool copy_utf8_sequence(std::string& out) {
-        const std::uint8_t lead = in_[pos_];
-        std::size_t length;
-        std::uint8_t second_min = 0x80, second_max = 0xBF;
+        const std::size_t length = utf8_sequence_length(in_.subspan(pos_));
+        if (length == 0) return fail(ErrorCode::JsonInvalidUtf8, "invalid UTF-8 sequence");
 
-        if (lead >= 0xC2 && lead <= 0xDF) {
-            length = 2;
-        } else if (lead >= 0xE0 && lead <= 0xEF) {
-            length = 3;
-            if (lead == 0xE0) second_min = 0xA0;
-            if (lead == 0xED) second_max = 0x9F;
-        } else if (lead >= 0xF0 && lead <= 0xF4) {
-            length = 4;
-            if (lead == 0xF0) second_min = 0x90;
-            if (lead == 0xF4) second_max = 0x8F;
-        } else {
-            return fail(ErrorCode::JsonInvalidUtf8, "invalid UTF-8 lead byte");
-        }
-
-        if (pos_ + length > in_.size()) return fail(ErrorCode::JsonInvalidUtf8, "truncated UTF-8 sequence");
-        if (in_[pos_ + 1] < second_min || in_[pos_ + 1] > second_max) {
-            return fail(ErrorCode::JsonInvalidUtf8, "invalid UTF-8 sequence");
-        }
-        for (std::size_t i = 2; i < length; ++i) {
-            if (in_[pos_ + i] < 0x80 || in_[pos_ + i] > 0xBF) return fail(ErrorCode::JsonInvalidUtf8, "invalid UTF-8 sequence");
-        }
         for (std::size_t i = 0; i < length; ++i) out.push_back(static_cast<char>(in_[pos_ + i]));
         pos_ += length;
         return true;

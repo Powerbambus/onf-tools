@@ -7,9 +7,11 @@ add_executable(onf_tests
     unit/test_diagnostics.cpp
     unit/test_json.cpp
     unit/test_limits.cpp
+    unit/test_paths.cpp
     unit/test_stroke_parser.cpp
     unit/test_strokes_file.cpp
     unit/test_types.cpp
+    unit/test_utf8.cpp
     unit/test_values.cpp
     unit/test_varint.cpp
 )

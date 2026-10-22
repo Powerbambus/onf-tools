@@ -1,6 +1,8 @@
 add_library(onf STATIC
+    src/container/paths.cpp
     src/errors.cpp
     src/primitives/bytecursor.cpp
+    src/primitives/utf8.cpp
     src/primitives/varint.cpp
     src/read/json.cpp
     src/read/stroke_parser.cpp

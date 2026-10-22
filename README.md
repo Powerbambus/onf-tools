@@ -10,7 +10,7 @@ Early development. Targets ONF **0.2.0**, which is a pre-release version without
 
 | Component | State |
 |---|---|
-| `onf/` read side | started: build setup, error and diagnostics types, limits, byte cursor, varint and zigzag decoding, value types, strokes.bin parsing (header, chunks, strokes, samples), strict JSON parser, color/version/date parsers; no ZIP container or manifest yet |
+| `onf/` read side | started: build setup, error and diagnostics types, limits, byte cursor, varint and zigzag decoding, value types, strokes.bin parsing (header, chunks, strokes, samples), strict JSON parser, color/version/date parsers, entry name and identifier checks; no ZIP container or manifest yet |
 | `reader/` | planned (command line first) |
 | `onf/` write side | planned |
 | `writer/` | planned |
@@ -24,7 +24,7 @@ onf-tools/
 ├── CMakeLists.txt
 ├── CMakePresets.json
 ├── onf/            Format layer
-│   ├── include/onf/    Public headers (primitives/: byte cursor, varint; model/: value types; read/: strokes.bin and JSON parsers)
+│   ├── include/onf/    Public headers (primitives/: byte cursor, varint, UTF-8; model/: value types; read/: strokes.bin and JSON parsers; container/: entry name checks)
 │   └── src/
 ├── reader/         Viewer application, depends only on onf/ (planned)
 ├── writer/         Writer application, depends only on onf/ (planned)
