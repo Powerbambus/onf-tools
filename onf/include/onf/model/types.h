@@ -19,6 +19,19 @@ struct Color {
 
 static_assert(sizeof(Color) == 4);
 
+// Calendar date and time in UTC with millisecond precision, as used by the manifest (spec 6.1.2).
+struct UtcDateTime {
+    std::uint16_t year = 0;
+    std::uint8_t month = 0;
+    std::uint8_t day = 0;
+    std::uint8_t hour = 0;
+    std::uint8_t minute = 0;
+    std::uint8_t second = 0;
+    std::uint16_t millisecond = 0;
+
+    friend bool operator==(const UtcDateTime&, const UtcDateTime&) = default;
+};
+
 // Stroke flags, spec 7.4.3. Undefined bits are kept in raw() and ignored by the accessors.
 class StrokeFlags {
 public:

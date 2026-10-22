@@ -10,6 +10,7 @@ add_executable(onf_tests
     unit/test_stroke_parser.cpp
     unit/test_strokes_file.cpp
     unit/test_types.cpp
+    unit/test_values.cpp
     unit/test_varint.cpp
 )
 target_link_libraries(onf_tests PRIVATE onf::onf)

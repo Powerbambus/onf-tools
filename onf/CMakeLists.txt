@@ -5,6 +5,7 @@ add_library(onf STATIC
     src/read/json.cpp
     src/read/stroke_parser.cpp
     src/read/strokes_file.cpp
+    src/read/values.cpp
 )
 add_library(onf::onf ALIAS onf)
 

@@ -10,7 +10,7 @@ Early development. Targets ONF **0.2.0**, which is a pre-release version without
 
 | Component | State |
 |---|---|
-| `onf/` read side | started: build setup, error and diagnostics types, limits, byte cursor, varint and zigzag decoding, value types, strokes.bin parsing (header, chunks, strokes, samples), strict JSON parser; no ZIP container or manifest yet |
+| `onf/` read side | started: build setup, error and diagnostics types, limits, byte cursor, varint and zigzag decoding, value types, strokes.bin parsing (header, chunks, strokes, samples), strict JSON parser, color/version/date parsers; no ZIP container or manifest yet |
 | `reader/` | planned (command line first) |
 | `onf/` write side | planned |
 | `writer/` | planned |
