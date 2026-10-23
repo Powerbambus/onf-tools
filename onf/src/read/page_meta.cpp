@@ -91,6 +91,16 @@ Result<Background, PageError> parse_background(const JsonValue& value, const Con
             background.top_margin = static_cast<Coord>(*number);
         }
     }
+    // line_width is optional and only read for ruled and grid (spec 6.3.1); other types ignore it.
+    if (background.kind == BackgroundKind::Ruled || background.kind == BackgroundKind::Grid) {
+        if (const JsonValue* width = value.find("line_width")) {
+            const std::int64_t* number = width->get_integer();
+            if (number == nullptr || *number < 1 || *number > kCoordMax) {
+                return context.fail(ErrorCode::BackgroundInvalidField, "background: field \"line_width\" must be an integer from 1 to 2147483647");
+            }
+            background.line_width = static_cast<Coord>(*number);
+        }
+    }
     return background;
 }
 

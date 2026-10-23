@@ -49,6 +49,8 @@ Problem check_background(const std::string& where, const Background& background)
     }
     if (type == "blank" && background.top_margin != 0) return problem(where, "top_margin is only for ruled, grid and dotted", "6.3.1");
     if (background.top_margin < 0) return problem(where, "top_margin must be at least 0", "6.3.1");
+    if (background.line_width != 0 && type != "ruled" && type != "grid") return problem(where, "line_width is only for ruled and grid", "6.3.1");
+    if (background.line_width < 0) return problem(where, "line_width must be at least 1", "6.3.1");
     if (type != "blank") {
         if (!background.foreground_color) return problem(where, "background foreground_color is required for this type", "6.3.1");
         if (!background.spacing || *background.spacing < 1) return problem(where, "background spacing must be positive", "6.3.1");

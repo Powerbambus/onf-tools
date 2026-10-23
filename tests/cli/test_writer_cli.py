@@ -125,11 +125,11 @@ with tempfile.TemporaryDirectory() as tmp:
     check(run(WRITER, "rewrite", minimal, tmp / "no_such_directory" / "x.onf")[0] == 5, "an output in a missing directory is a write error")
 
     older = tmp / "older.onf"
-    rewritten(minimal, {"manifest.json": lambda d: d.replace(b'"0.4.0"', b'"0.2.0"')}, older)
+    rewritten(minimal, {"manifest.json": lambda d: d.replace(b'"0.5.0"', b'"0.2.0"')}, older)
     code, stdout, stderr = run(WRITER, "rewrite", older, refused)
     check(code == 4 and not refused.exists(), "an unsupported version is rejected")
     code, stdout, stderr = run(WRITER, "rewrite", older, refused, "--allow-unsupported-version")
-    check(code == 0 and 'version:     0.4.0' in run(READER, "info", refused)[1], "--allow-unsupported-version rewrites it as 0.4.0")
+    check(code == 0 and 'version:     0.5.0' in run(READER, "info", refused)[1], "--allow-unsupported-version rewrites it as 0.5.0")
 
 print("onf-writer cli:", "FAILED" if failures else "ok", f"({len(failures)} failures)")
 sys.exit(1 if failures else 0)

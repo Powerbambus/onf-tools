@@ -64,6 +64,10 @@ meta_not_json	page	json_syntax	2.3.5
 meta_width_missing	page	meta_invalid_field	6.2.2
 meta_width_zero	page	meta_invalid_field	6.2.2
 meta_background_field_missing	page	background_invalid_field	6.3.1
+meta_line_width_zero	page	background_invalid_field	6.3.1
+meta_line_width_negative	page	background_invalid_field	6.3.1
+meta_line_width_too_large	page	background_invalid_field	6.3.1
+meta_line_width_string	page	background_invalid_field	6.3.1
 meta_top_margin_negative	page	background_invalid_field	6.3.1
 meta_top_margin_too_large	page	background_invalid_field	6.3.1
 meta_top_margin_string	page	background_invalid_field	6.3.1

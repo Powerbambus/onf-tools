@@ -494,6 +494,12 @@ TEST_CASE("writer: a document that breaks a rule is refused and nothing is writt
              d.pages[0].meta.background.spacing.reset();
              d.pages[0].meta.background.top_margin = 5;
          }, "top_margin"},
+        {"negative line_width", [](WriteDocument& d) {
+             d.pages[0].meta.background.type = "ruled";
+             d.pages[0].meta.background.kind = BackgroundKind::Ruled;
+             d.pages[0].meta.background.line_width = -1;
+         }, "line_width"},
+        {"line_width on a dotted page", [](WriteDocument& d) { d.pages[0].meta.background.line_width = 4; }, "line_width"},
         {"layer 0", [](WriteDocument& d) { std::get<Stroke>(d.pages[0].ink[0]).layer = 0; }, "layer"},
         {"layer of a shape", [](WriteDocument& d) { std::get<Shape>(d.pages[0].ink[2]).layer = 0; }, "layer"},
         {"layer of text", [](WriteDocument& d) { d.pages[0].meta.text_objects[0].layer = 0; }, "layer"},

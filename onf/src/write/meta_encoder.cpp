@@ -124,6 +124,7 @@ JsonValue page_meta_to_json(const PageMeta& meta) {
     if (meta.background.foreground_color) json_add(background, "foreground_color", json_string(format_color(*meta.background.foreground_color)));
     if (meta.background.spacing) json_add(background, "spacing", json_integer(*meta.background.spacing));
     if (meta.background.top_margin > 0) json_add(background, "top_margin", json_integer(meta.background.top_margin));
+    if (meta.background.line_width > 0) json_add(background, "line_width", json_integer(meta.background.line_width));
     json_add(out, "background", std::move(background));
 
     JsonValue texts = json_array();

@@ -215,7 +215,7 @@ ZipEntrySpec entry(std::string name, const Bytes& data) {
 
 Document document_with(const std::vector<std::pair<std::string, Bytes>>& assets) {
     ZipSpec spec;
-    spec.entries.push_back(entry("manifest.json", text_bytes(R"({"onf_version":"0.4.0","title":"T","created_at":"2026-06-14T10:32:00.000Z",)"
+    spec.entries.push_back(entry("manifest.json", text_bytes(R"({"onf_version":"0.5.0","title":"T","created_at":"2026-06-14T10:32:00.000Z",)"
                                                              R"("modified_at":"2026-06-14T12:15:00.000Z","pages":[{"id":"p00001","order":1}]})")));
     spec.entries.push_back(entry("pages/p00001/meta.json", text_bytes(kMeta)));
     Bytes strokes = file_header();

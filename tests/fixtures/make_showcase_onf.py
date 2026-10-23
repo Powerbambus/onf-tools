@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Writes tests/fixtures/valid/showcase.onf, an ONF 0.4.0 file that uses most features, independently of the C++ code.
+"""Writes tests/fixtures/valid/showcase.onf, an ONF 0.5.0 file that uses most features, independently of the C++ code.
 
 One page with: all four pen tools, a fountain pen stroke without taper, the four shape types with rotation, text with spans on several
 layers, a PNG placement, a cropped PNG placement, a crop that lies outside the image (drawn as a placeholder), and a PDF placement. It is meant for looking at the output of onf-reader svg, and as a
@@ -113,7 +113,7 @@ text_note = {
 }
 meta = {
     "width": 21000, "height": 29700,
-    "background": {"type": "grid", "color": "#FFFFF8FF", "foreground_color": "#2244AAFF", "spacing": 500, "top_margin": 1000},
+    "background": {"type": "grid", "color": "#FFFFF8FF", "foreground_color": "#2244AAFF", "spacing": 500, "top_margin": 1000, "line_width": 4},
     "text_objects": [text_title, text_note],
     "assets": [
         {"id": "a00001", "layer": 1, "hash": image_hash, "extension": "png", "x": 14000, "y": 13000, "width": 5000, "height": 3000},
@@ -128,7 +128,7 @@ meta = {
     ],
 }
 manifest = {
-    "onf_version": "0.4.0", "generator": "make_showcase_onf.py", "title": "Showcase",
+    "onf_version": "0.5.0", "generator": "make_showcase_onf.py", "title": "Showcase",
     "created_at": "2026-06-14T10:32:00.000Z", "modified_at": "2026-06-14T12:15:00.000Z",
     "pages": [{"id": "p00001", "order": 1}],
 }

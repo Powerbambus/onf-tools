@@ -20,15 +20,15 @@ VersionStatus status_of(const char* text) {
 
 }  // namespace
 
-TEST_CASE("version: 0.4.x is supported") {
-    for (const char* text : {"0.4.0", "0.4.1", "0.4.99", "0.4.4294967295"}) {
+TEST_CASE("version: 0.5.x is supported") {
+    for (const char* text : {"0.5.0", "0.5.1", "0.5.99", "0.5.4294967295"}) {
         CAPTURE(text);
         CHECK(status_of(text) == VersionStatus::Supported);
     }
 }
 
 TEST_CASE("version: every other 0.x is an unsupported pre-release") {
-    for (const char* text : {"0.0.0", "0.0.1", "0.1.0", "0.1.4", "0.2.0", "0.2.1", "0.3.0", "0.3.1", "0.5.0", "0.10.0", "0.20.0", "0.12.0",
+    for (const char* text : {"0.0.0", "0.0.1", "0.1.0", "0.1.4", "0.2.0", "0.2.1", "0.3.0", "0.3.1", "0.4.0", "0.4.1", "0.10.0", "0.20.0", "0.12.0",
                              "0.4294967295.0"}) {
         CAPTURE(text);
         CHECK(status_of(text) == VersionStatus::UnsupportedPreRelease);
@@ -55,7 +55,7 @@ TEST_CASE("version: events") {
     CHECK(sink.items()[0].kind == DiagnosticKind::UnsupportedVersion);
     CHECK(sink.items()[0].page_id.empty());
     CHECK(sink.items()[0].detail.find("0.1.4") != std::string::npos);
-    CHECK(sink.items()[0].detail.find("0.4.x") != std::string::npos);
+    CHECK(sink.items()[0].detail.find("0.5.x") != std::string::npos);
 
     report_version_event(newer, VersionStatus::NewerMajor, &sink);
     REQUIRE(sink.items().size() == 2);

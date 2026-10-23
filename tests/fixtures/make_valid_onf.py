@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Writes tests/fixtures/valid/minimal.onf, an ONF 0.4.0 file, independently of the C++ code.
+"""Writes tests/fixtures/valid/minimal.onf, an ONF 0.5.0 file, independently of the C++ code.
 
 Page p00001 is displayed second and holds two strokes, a shape, a text object with spans and a PDF placement.
 Page p00002 is displayed first and has no strokes. The expected values are in tests/unit/test_document.cpp.
@@ -68,7 +68,7 @@ def strokes_file(chunks):
 
 
 manifest = {
-    "onf_version": "0.4.0",
+    "onf_version": "0.5.0",
     "generator": "make_valid_onf.py",
     "title": "Minimal",
     "created_at": "2026-06-14T10:32:00.000Z",

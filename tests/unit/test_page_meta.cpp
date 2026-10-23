@@ -202,6 +202,26 @@ TEST_CASE("meta: top_margin is optional and must be a non-negative 32-bit intege
     CHECK(accepted(meta(R"({"type":"blank","color":"#FFFFFFFF","top_margin":"x"})")).background.top_margin == 0);
 }
 
+TEST_CASE("meta: line_width is optional, only for ruled and grid, and a positive 32-bit integer (spec 6.3.1)") {
+    const auto with_width = [](const char* type, const std::string& width) {
+        return meta(std::string(R"({"type":")") + type + R"(","color":"#FFFFFFFF","foreground_color":"#000000FF","spacing":500,"line_width":)" +
+                    width + "}");
+    };
+    CHECK(accepted(meta(dotted())).background.line_width == 0);
+    for (const char* type : {"ruled", "grid"}) {
+        CAPTURE(type);
+        CHECK(accepted(with_width(type, "1")).background.line_width == 1);
+        CHECK(accepted(with_width(type, "2147483647")).background.line_width == 2147483647);
+        for (const char* bad : {"0", "-1", "2147483648", "\"2\"", "null", "true", "[]"}) {
+            CAPTURE(bad);
+            CHECK(problem(with_width(type, bad)) == ErrorCode::BackgroundInvalidField);
+        }
+    }
+    // Dotted, blank and unknown types ignore the member.
+    CHECK(accepted(with_width("dotted", "0")).background.line_width == 0);
+    CHECK(accepted(meta(R"({"type":"blank","color":"#FFFFFFFF","line_width":"x"})")).background.line_width == 0);
+}
+
 TEST_CASE("meta: colors") {
     CHECK(accepted(meta(dotted("500", "#abcdef12"))).background.foreground_color == Color{0xAB, 0xCD, 0xEF, 0x12});
     for (const char* bad : {"#FFF", "#FFFFFF", "FFFFFFFF", "#FFFFFFFFF", "#GGGGGGGG", " #FFFFFFFF", "rgb(0,0,0)", ""}) {

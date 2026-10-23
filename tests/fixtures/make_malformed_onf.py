@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Writes tests/fixtures/malformed/*.onf and expected.tsv: one broken ONF 0.4.0 file per case of spec 12.3.
+"""Writes tests/fixtures/malformed/*.onf and expected.tsv: one broken ONF 0.5.0 file per case of spec 12.3.
 
 Every file is a valid document with exactly one thing wrong. expected.tsv says where the reader must stop
 (scope "file" rejects the whole file, "page" makes only that page unreadable, spec 12.3.1) and with which error
@@ -60,7 +60,7 @@ def strokes_file(chunks, version=2, magic=b"ONFS", end=True):
 
 
 MANIFEST = {
-    "onf_version": "0.4.0", "title": "Malformed", "created_at": "2026-06-14T10:32:00.000Z",
+    "onf_version": "0.5.0", "title": "Malformed", "created_at": "2026-06-14T10:32:00.000Z",
     "modified_at": "2026-06-14T12:15:00.000Z", "pages": [{"id": "p00001", "order": 1}, {"id": "p00002", "order": 2}],
 }
 TEXT = {
@@ -218,6 +218,14 @@ def with_margin(value):
     return page_meta(with_meta(background={"type": "ruled", "color": "#FFFFFFFF", "foreground_color": "#000000FF", "spacing": 500, "top_margin": value}))
 
 
+def with_line_width(value, type="grid"):
+    return page_meta(with_meta(background={"type": type, "color": "#FFFFFFFF", "foreground_color": "#000000FF", "spacing": 500, "line_width": value}))
+
+
+case("meta_line_width_zero", "page", "background_invalid_field", "6.3.1", **with_line_width(0))
+case("meta_line_width_negative", "page", "background_invalid_field", "6.3.1", **with_line_width(-1))
+case("meta_line_width_too_large", "page", "background_invalid_field", "6.3.1", **with_line_width(2147483648))
+case("meta_line_width_string", "page", "background_invalid_field", "6.3.1", **with_line_width("2", "ruled"))
 case("meta_top_margin_negative", "page", "background_invalid_field", "6.3.1", **with_margin(-1))
 case("meta_top_margin_too_large", "page", "background_invalid_field", "6.3.1", **with_margin(2147483648))
 case("meta_top_margin_string", "page", "background_invalid_field", "6.3.1", **with_margin("10"))

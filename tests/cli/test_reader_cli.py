@@ -44,7 +44,7 @@ minimal = FIXTURES / "minimal.onf"
 # --- info ---
 code, out, err = run("info", showcase)
 check(code == 0, f"info exits 0, got {code}")
-check("version:     0.4.0" in out and "generator:   make_showcase_onf.py" in out, "info shows version and generator")
+check("version:     0.5.0" in out and "generator:   make_showcase_onf.py" in out, "info shows version and generator")
 check("6 strokes (285 samples), 5 shapes" in out, "info counts strokes, samples and shapes")
 check("5 placements (1 pdf, 4 png)" in out and "layers:      1, 2, 3, 4, 5" in out, "info counts assets and layers")
 
@@ -71,6 +71,8 @@ if document is not None:
     layer_ids = [g.getAttribute("id") for g in document.getElementsByTagName("g") if g.getAttribute("id").startswith("layer")]
     check(layer_ids == ["layer1", "layer2", "layer3", "layer4", "layer5"], f"layers are drawn in ascending order, got {layer_ids}")
     check(len(document.getElementsByTagName("mask")) == 0, "the SVG has no masks")
+    grid = [g for g in document.getElementsByTagName("g") if g.getAttribute("stroke-width") == "4"]
+    check(len(grid) == 1 and "non-scaling-stroke" not in grid[0].toxml(), "line_width gives lines of that width in coord units")
     check(len(document.getElementsByTagName("ellipse")) == 1 and len(document.getElementsByTagName("polygon")) == 1, "shapes are drawn")
     check(len(document.getElementsByTagName("image")) == 2, "the PNG asset is embedded twice: whole and cropped")
     nested = [e for e in document.getElementsByTagName("svg") if e is not svg]
@@ -111,7 +113,7 @@ with tempfile.TemporaryDirectory() as tmp:
 
     # A file of another ONF version needs the decision of the host (spec 10.2).
     older = Path(tmp) / "older.onf"
-    rewritten(showcase, {"manifest.json": lambda d: d.replace(b'"0.4.0"', b'"0.2.0"')}, older)
+    rewritten(showcase, {"manifest.json": lambda d: d.replace(b'"0.5.0"', b'"0.2.0"')}, older)
     code, out, err = run("info", older)
     check(code == 4 and "unsupported_version" in err, "an unsupported version is rejected and reported")
     code, out, err = run("info", older, "--allow-unsupported-version")

@@ -81,7 +81,7 @@ ZipSpec onf_spec(const std::string& manifest, const std::vector<TestPage>& pages
 }
 
 ZipSpec three_pages() {
-    return onf_spec(manifest_json("0.4.0", {{"p00001", 1}, {"p00002", 2}, {"p00003", 3}}),
+    return onf_spec(manifest_json("0.5.0", {{"p00001", 1}, {"p00002", 2}, {"p00003", 3}}),
                     {{"p00001", kMeta, strokes_file({one_stroke(1), one_stroke(2)})},
                      {"p00002", kMeta, strokes_file({one_stroke(1)})},
                      {"p00003", kMeta, strokes_file({})}});
@@ -129,7 +129,7 @@ TEST_CASE("document: a file written by an independent encoder") {
     CollectingSink sink;
     auto inspection = inspect(std::move(source).value(), &sink);
     REQUIRE(inspection.has_value());
-    CHECK(inspection.value().version() == Version{0, 4, 0});
+    CHECK(inspection.value().version() == Version{0, 5, 0});
     CHECK(inspection.value().status() == VersionStatus::Supported);
     CHECK(sink.items().empty());
 
@@ -212,17 +212,17 @@ TEST_CASE("document: inspect and open with a supported version") {
     auto inspection = inspect_spec(three_pages(), &sink);
     REQUIRE(inspection.has_value());
     CHECK(inspection.value().status() == VersionStatus::Supported);
-    CHECK(inspection.value().version() == Version{0, 4, 0});
+    CHECK(inspection.value().version() == Version{0, 5, 0});
     CHECK(sink.items().empty());
 
     auto document = std::move(inspection).value().open();
     REQUIRE(document.has_value());
     CHECK(document.value().pages().size() == 3);
-    CHECK(document.value().manifest().onf_version == Version{0, 4, 0});
+    CHECK(document.value().manifest().onf_version == Version{0, 5, 0});
 }
 
 TEST_CASE("document: pages come back in display order with their content") {
-    const Document document = open_ok(onf_spec(manifest_json("0.4.0", {{"p00001", 2}, {"p00002", 1}}),
+    const Document document = open_ok(onf_spec(manifest_json("0.5.0", {{"p00001", 2}, {"p00002", 1}}),
                                                {{"p00001", kMeta, strokes_file({one_stroke(7, 11)})},
                                                 {"p00002", kMeta, strokes_file({one_stroke(8, 22), one_stroke(9, 33)})}}));
     REQUIRE(document.pages().size() == 2);
@@ -332,9 +332,9 @@ TEST_CASE("inspect: container and manifest errors") {
 }
 
 TEST_CASE("open: manifest errors reject the whole file") {
-    CHECK(open_error(onf_spec(manifest_json("0.4.0", {}), {})) == ErrorCode::ManifestPagesInvalid);
-    CHECK(open_error(onf_spec(manifest_json("0.4.0", {{"p00001", 1}, {"p00001", 2}}), {})) == ErrorCode::ManifestPagesInvalid);
-    CHECK(open_error(onf_spec(manifest_json("0.4.0", {{"p00001", 1}, {"p00002", 2}}),
+    CHECK(open_error(onf_spec(manifest_json("0.5.0", {}), {})) == ErrorCode::ManifestPagesInvalid);
+    CHECK(open_error(onf_spec(manifest_json("0.5.0", {{"p00001", 1}, {"p00001", 2}}), {})) == ErrorCode::ManifestPagesInvalid);
+    CHECK(open_error(onf_spec(manifest_json("0.5.0", {{"p00001", 1}, {"p00002", 2}}),
                               {{"p00001", kMeta, strokes_file({})}})) == ErrorCode::PageDirectoryMissing);
 }
 
@@ -383,7 +383,7 @@ TEST_CASE("page: errors in the files of a page") {
 
     for (const Case& c : cases) {
         CAPTURE(c.what);
-        const Document document = open_ok(onf_spec(manifest_json("0.4.0", {{"p00001", 1}}), {c.page}));
+        const Document document = open_ok(onf_spec(manifest_json("0.5.0", {{"p00001", 1}}), {c.page}));
         CollectingSink sink;
         const auto result = document.page("p00001", &sink);
         REQUIRE_FALSE(result.has_value());
@@ -395,7 +395,7 @@ TEST_CASE("page: errors in the files of a page") {
 
 TEST_CASE("page: missing files of a page are page errors, not file errors") {
     ZipSpec no_strokes;
-    no_strokes.entries.push_back(entry("manifest.json", manifest_json("0.4.0", {{"p00001", 1}, {"p00002", 2}})));
+    no_strokes.entries.push_back(entry("manifest.json", manifest_json("0.5.0", {{"p00001", 1}, {"p00002", 2}})));
     no_strokes.entries.push_back(entry("pages/p00001/meta.json", kMeta));
     no_strokes.entries.push_back(entry("pages/p00002/meta.json", kMeta));
     no_strokes.entries.push_back(entry("pages/p00002/strokes.bin", strokes_file({})));
@@ -407,13 +407,13 @@ TEST_CASE("page: missing files of a page are page errors, not file errors") {
     CHECK(document.page("p00002").has_value());
 
     ZipSpec no_meta;
-    no_meta.entries.push_back(entry("manifest.json", manifest_json("0.4.0", {{"p00001", 1}})));
+    no_meta.entries.push_back(entry("manifest.json", manifest_json("0.5.0", {{"p00001", 1}})));
     no_meta.entries.push_back(entry("pages/p00001/strokes.bin", strokes_file({})));
     CHECK(open_ok(no_meta).page("p00001").error().code == ErrorCode::PageFileMissing);
 }
 
 TEST_CASE("page: a strokes version other than 2 is reported and the page is unreadable") {
-    const Document document = open_ok(onf_spec(manifest_json("0.4.0", {{"p00001", 1}}),
+    const Document document = open_ok(onf_spec(manifest_json("0.5.0", {{"p00001", 1}}),
                                                {{"p00001", kMeta, concat({file_header(1), chunk(2)})}}));
     CollectingSink sink;
     const auto result = document.page("p00001", &sink);

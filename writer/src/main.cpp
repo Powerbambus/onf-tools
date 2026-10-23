@@ -23,7 +23,7 @@ constexpr const char* kUsage =
     "usage:\n"
     "  onf-writer rewrite IN.onf OUT.onf [--allow-unsupported-version]\n"
     "\n"
-    "rewrite reads a file completely and writes it again as ONF 0.4.0, with the pages renumbered and the\n"
+    "rewrite reads a file completely and writes it again as ONF 0.5.0, with the pages renumbered and the\n"
     "generator replaced. It stops without writing if a page or an asset cannot be copied faithfully.\n"
     "Events go to stderr.\n"
     "exit codes: 0 ok, 1 usage, 2 the input cannot be read, 3 something cannot be copied, 4 version rejected,\n"

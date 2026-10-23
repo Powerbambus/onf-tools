@@ -81,15 +81,17 @@ std::string background(const PageMeta& meta) {
     switch (bg.kind) {
         case BackgroundKind::Ruled:
         case BackgroundKind::Grid: {
-            // One physical pixel wide, at 20% of the line colour's opacity, none at coordinate 0.
-            out << "<g stroke=\"" << rgb(fg) << "\" stroke-opacity=\"" << num(0.2 * alpha_of(fg)) << "\" stroke-width=\"1\" fill=\"none\">\n";
+            // A line_width in coord units, else one physical pixel wide; at 20% of the line colour's opacity, none at coordinate 0.
+            const std::string width = bg.line_width > 0 ? std::to_string(bg.line_width) : "1";
+            const std::string scaling = bg.line_width > 0 ? "" : " vector-effect=\"non-scaling-stroke\"";
+            out << "<g stroke=\"" << rgb(fg) << "\" stroke-opacity=\"" << num(0.2 * alpha_of(fg)) << "\" stroke-width=\"" << width << "\" fill=\"none\">\n";
             for (std::int64_t y = spacing; y <= meta.height; y += spacing) {
                 if (y < top_margin) continue;
-                out << "<line x1=\"0\" y1=\"" << y << "\" x2=\"" << meta.width << "\" y2=\"" << y << "\" vector-effect=\"non-scaling-stroke\"/>\n";
+                out << "<line x1=\"0\" y1=\"" << y << "\" x2=\"" << meta.width << "\" y2=\"" << y << "\"" << scaling << "/>\n";
             }
             if (bg.kind == BackgroundKind::Grid) {
                 for (std::int64_t x = spacing; x <= meta.width; x += spacing) {
-                    out << "<line x1=\"" << x << "\" y1=\"" << top_margin << "\" x2=\"" << x << "\" y2=\"" << meta.height << "\" vector-effect=\"non-scaling-stroke\"/>\n";
+                    out << "<line x1=\"" << x << "\" y1=\"" << top_margin << "\" x2=\"" << x << "\" y2=\"" << meta.height << "\"" << scaling << "/>\n";
                 }
             }
             out << "</g>\n";
