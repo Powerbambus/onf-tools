@@ -37,3 +37,12 @@ if(ONF_SANITIZE)
 endif()
 
 add_test(NAME onf_tests COMMAND onf_tests)
+
+# The command line tool is started as a program; these tests need python3.
+find_package(Python3 COMPONENTS Interpreter)
+if(Python3_Interpreter_FOUND)
+    add_test(NAME onf_reader_cli
+             COMMAND ${Python3_EXECUTABLE} -I ${CMAKE_CURRENT_SOURCE_DIR}/cli/test_reader_cli.py $<TARGET_FILE:onf_reader> ${CMAKE_CURRENT_SOURCE_DIR}/fixtures)
+    add_test(NAME onf_writer_cli
+             COMMAND ${Python3_EXECUTABLE} -I ${CMAKE_CURRENT_SOURCE_DIR}/cli/test_writer_cli.py $<TARGET_FILE:onf_writer> $<TARGET_FILE:onf_reader> ${CMAKE_CURRENT_SOURCE_DIR}/fixtures)
+endif()

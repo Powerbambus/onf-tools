@@ -7,6 +7,7 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 option(ONF_BUILD_TESTS "Build the onf test target" ON)
+option(ONF_BUILD_FUZZERS "Build the libFuzzer targets (needs Clang)" OFF)
 option(ONF_SANITIZE "Build everything with AddressSanitizer and UndefinedBehaviorSanitizer" OFF)
 
 if(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
@@ -26,6 +27,12 @@ find_path(LIBZIP_INCLUDE_DIR NAMES zip.h REQUIRED)
 find_package(ZLIB REQUIRED)
 
 add_subdirectory(onf)
+add_subdirectory(reader)
+add_subdirectory(writer)
+
+if(ONF_BUILD_FUZZERS)
+    add_subdirectory(fuzz)
+endif()
 
 if(ONF_BUILD_TESTS)
     enable_testing()
