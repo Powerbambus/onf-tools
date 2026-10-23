@@ -1,4 +1,6 @@
+#include <map>
 #include <set>
+#include <utility>
 #include <string>
 #include <unordered_set>
 #include <variant>
@@ -45,6 +47,8 @@ Problem check_background(const std::string& where, const Background& background)
     if (type != "blank" && type != "ruled" && type != "grid" && type != "dotted") {
         return problem(where, "background type \"" + type + "\" is not one of blank, ruled, grid, dotted", "6.3.1");
     }
+    if (type == "blank" && background.top_margin != 0) return problem(where, "top_margin is only for ruled, grid and dotted", "6.3.1");
+    if (background.top_margin < 0) return problem(where, "top_margin must be at least 0", "6.3.1");
     if (type != "blank") {
         if (!background.foreground_color) return problem(where, "background foreground_color is required for this type", "6.3.1");
         if (!background.spacing || *background.spacing < 1) return problem(where, "background spacing must be positive", "6.3.1");
@@ -65,9 +69,9 @@ Problem check_layer(const std::string& where, std::uint16_t layer) {
 Problem check_stroke(const std::string& where, const Stroke& stroke) {
     if (auto p = check_layer(where, stroke.layer)) return p;
     if (auto p = check_created_at(where, stroke.created_at)) return p;
-    if (stroke.tool_type_raw > static_cast<std::uint16_t>(ToolType::LineEraser)) return problem(where, "tool type is reserved", "7.4.2");
+    if (stroke.tool_type_raw > static_cast<std::uint16_t>(ToolType::Highlighter)) return problem(where, "tool type must be 0 to 3", "7.4.2");
     if (stroke.base_width == 0) return problem(where, "base_width must be greater than 0", "7.4.1");
-    if ((stroke.flags.raw() & ~0x001Fu) != 0) return problem(where, "reserved flag bits must be 0", "7.4.3");
+    if ((stroke.flags.raw() & ~0x007Fu) != 0) return problem(where, "reserved flag bits must be 0", "7.4.3");
 
     const SampleColumns& s = stroke.samples;
     const std::size_t n = s.size();
@@ -150,14 +154,14 @@ std::optional<std::string> check_writable(const WriteDocument& document) {
     if (auto p = check_time("created_at", document.created_at)) return p;
     if (auto p = check_time("modified_at", document.modified_at)) return p;
 
-    // The files that will be embedded, by archive name.
-    std::set<std::string> embedded;
+    // The files that will be embedded, by archive name, with the pixel size of an image (0 for a pdf).
+    std::map<std::string, std::pair<std::int64_t, std::int64_t>> embedded;
     for (const WriteAsset& asset : document.assets) {
         const std::string name = sha256_hex(asset.bytes) + "." + asset.extension;
         if (!is_supported_asset_extension(asset.extension)) return problem("asset " + name, "format is not one of webp, png, jpg, pdf", "9.2.2");
         const AssetCheck check = check_asset_content(asset.extension, asset.bytes);
         if (check.status != AssetStatus::Ok) return problem("asset " + name, check.detail, "9.2.3");
-        embedded.insert(name);
+        embedded[name] = {check.width.value_or(0), check.height.value_or(0)};
     }
     if (document.thumbnail) {
         const AssetCheck check = check_asset_content("png", *document.thumbnail);
@@ -206,8 +210,19 @@ std::optional<std::string> check_writable(const WriteDocument& document) {
             if (asset.extension == "pdf" ? (!asset.pdf_page || *asset.pdf_page < 1) : asset.pdf_page.has_value()) {
                 return problem(w, "pdf_page is required for pdf (1 or more) and must not be written otherwise", "9.3.2");
             }
-            if (!embedded.contains(asset.hash + "." + asset.extension)) {
+            const auto file = embedded.find(asset.hash + "." + asset.extension);
+            if (file == embedded.end()) {
                 return problem(w, "the file " + asset.hash + "." + asset.extension + " is not among the assets to embed", "9.5");
+            }
+            if (asset.crop) {
+                if (asset.extension == "pdf") return problem(w, "crop must not be written for a pdf", "9.3.2");
+                const Crop& crop = *asset.crop;
+                if (crop.x < 0 || crop.y < 0) return problem(w, "crop x and y must be at least 0", "9.3.2");
+                if (crop.width < 1 || crop.height < 1) return problem(w, "crop width and height must be at least 1", "9.3.2");
+                if (static_cast<std::int64_t>(crop.x) + crop.width > file->second.first ||
+                    static_cast<std::int64_t>(crop.y) + crop.height > file->second.second) {
+                    return problem(w, "the crop region must lie inside the image", "9.4.5");
+                }
             }
         }
     }

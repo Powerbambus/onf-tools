@@ -5,6 +5,7 @@ add_executable(onf_tests
     unit/test_result.cpp
     unit/test_document.cpp
     unit/test_assets.cpp
+    unit/test_erase.cpp
     unit/test_errors.cpp
     unit/test_ink_vectors.cpp
     unit/test_diagnostics.cpp

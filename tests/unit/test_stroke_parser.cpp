@@ -71,7 +71,7 @@ TEST_CASE("unknown tool types fall back to the ballpoint pen and keep the raw va
         CHECK(stroke.tool == ToolType::Ballpoint);
         CHECK(stroke.tool_type_raw == tool);
     }
-    for (std::uint16_t tool = 0; tool <= 4; ++tool) {
+    for (std::uint16_t tool = 0; tool <= 3; ++tool) {
         StrokeHeaderIn header;
         header.tool = tool;
         CHECK(static_cast<std::uint16_t>(parse_ok(body_of(header, {SampleIn{}})).tool) == tool);
@@ -362,6 +362,35 @@ TEST_CASE("parse_ink returns the strokes in file order") {
     CHECK(stroke_at(result.value(), 1).stroke_id == 3);
 }
 
+TEST_CASE("parse_ink skips strokes and shapes with the removed tool type 4 (spec 7.4.2)") {
+    StrokeHeaderIn removed_header;
+    removed_header.stroke_id = 2;
+    removed_header.tool = 4;
+    const Bytes removed_stroke = chunk(0x0001, body_of(removed_header, {SampleIn{5, 5, 255, 0}}));
+
+    ShapeIn in;
+    in.stroke_id = 3;
+    in.shape_type = 1;
+    in.parameters = ellipse_parameters(0, 0, 1, 1, 0);
+    in.tool = 4;
+    const Bytes removed_shape = chunk(0x0003, shape_body(in));
+
+    const Bytes file = concat({file_header(), simple_stroke_chunk(1, 10), removed_stroke, removed_shape, simple_stroke_chunk(4, 20)});
+    const auto result = parse_page(file);
+    REQUIRE(result.has_value());
+    REQUIRE(result.value().size() == 2);
+    CHECK(stroke_at(result.value(), 0).stroke_id == 1);
+    CHECK(stroke_at(result.value(), 1).stroke_id == 4);
+
+    // A skipped object still counts for the uniqueness of the ids and is still checked.
+    const Bytes clash = concat({file_header(), removed_stroke, simple_stroke_chunk(2)});
+    CHECK(parse_page(clash).error().code == ErrorCode::StrokeIdDuplicate);
+    StrokeHeaderIn broken = removed_header;
+    broken.layer = 0;
+    const Bytes invalid = concat({file_header(), chunk(0x0001, body_of(broken, {SampleIn{5, 5, 255, 0}}))});
+    CHECK(parse_page(invalid).error().code == ErrorCode::InkLayerZero);
+}
+
 TEST_CASE("a duplicate stroke_id makes the whole page malformed") {
     const Bytes first = simple_stroke_chunk(5);
     const Bytes file = concat({file_header(), first, simple_stroke_chunk(6), simple_stroke_chunk(5)});
@@ -608,12 +637,14 @@ TEST_CASE("shape: created_at follows the fixed header") {
     CHECK(shape_failure(Bytes(full.begin(), full.begin() + 20)).code == ErrorCode::ShapeHeaderTooShort);
 }
 
-TEST_CASE("shape: tool type 4 is malformed, other unknown tool types are not") {
+TEST_CASE("shape: tool type 4 parses like any other value, other unknown tool types fall back to the ballpoint pen") {
     ShapeIn in;
     in.shape_type = 1;
     in.parameters = ellipse_parameters(0, 0, 1, 1, 0);
     in.tool = 4;
-    CHECK(shape_failure(shape_body(in)).code == ErrorCode::ShapeToolTypeInvalid);
+    const Shape removed = shape_ok(shape_body(in));
+    CHECK(removed.tool_type_raw == 4);
+    CHECK(removed.tool == ToolType::Ballpoint);
     for (const std::uint16_t tool : {std::uint16_t{0}, std::uint16_t{1}, std::uint16_t{2}, std::uint16_t{3}}) {
         in.tool = tool;
         CHECK(shape_ok(shape_body(in)).tool_type_raw == tool);

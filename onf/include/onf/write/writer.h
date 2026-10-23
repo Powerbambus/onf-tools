@@ -1,6 +1,6 @@
 #pragma once
 
-// The write side: a document in memory to an ONF 0.3.0 file (spec 11.5, Conforming Writer). The public interface
+// The write side: a document in memory to an ONF 0.4.0 file (spec 11.5, Conforming Writer). The public interface
 // uses no third-party types.
 
 #include <cstdint>

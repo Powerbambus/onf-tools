@@ -14,7 +14,7 @@ bool same(const onf::Stroke& a, const onf::Stroke& b) {
     const onf::SampleColumns& x = a.samples;
     const onf::SampleColumns& y = b.samples;
     return a.stroke_id == b.stroke_id && a.layer == b.layer && a.created_at == b.created_at && a.color == b.color && a.tool_type_raw == b.tool_type_raw &&
-           a.base_width == b.base_width && (a.flags.raw() & 0x1F) == (b.flags.raw() & 0x1F) && x.x == y.x && x.y == y.y && x.pressure == y.pressure &&
+           a.base_width == b.base_width && (a.flags.raw() & 0x7F) == (b.flags.raw() & 0x7F) && x.x == y.x && x.y == y.y && x.pressure == y.pressure &&
            x.timestamp == y.timestamp && x.tilt_x == y.tilt_x && x.tilt_y == y.tilt_y && x.azimuth == y.azimuth;
 }
 

@@ -56,7 +56,6 @@ shape_without_shape_type	page	shape_header_too_short	7.3.2
 shape_parameters_truncated	page	shape_parameters_truncated	7.3.2
 shape_layer_zero	page	ink_layer_zero	5.6
 shape_base_width_zero	page	stroke_base_width_zero	7.3.2
-shape_tool_eraser	page	shape_tool_type_invalid	7.9.2
 shape_ellipse_rx_zero	page	shape_parameter_invalid	7.9.4
 shape_rectangle_height_negative	page	shape_parameter_invalid	7.9.4
 shape_rotation_36000	page	shape_parameter_invalid	7.9.6
@@ -65,6 +64,10 @@ meta_not_json	page	json_syntax	2.3.5
 meta_width_missing	page	meta_invalid_field	6.2.2
 meta_width_zero	page	meta_invalid_field	6.2.2
 meta_background_field_missing	page	background_invalid_field	6.3.1
+meta_top_margin_negative	page	background_invalid_field	6.3.1
+meta_top_margin_too_large	page	background_invalid_field	6.3.1
+meta_top_margin_string	page	background_invalid_field	6.3.1
+meta_top_margin_fraction	page	json_non_integer_number	2.3.5
 meta_text_objects_not_an_array	page	meta_invalid_field	6.2.2
 text_layer_zero	page	layer_invalid	5.6
 text_layer_too_large	page	layer_invalid	5.6
@@ -84,4 +87,16 @@ asset_hash_uppercase	page	invalid_identifier	4.6.1
 asset_hash_traversal	page	invalid_identifier	4.6.1
 asset_pdf_page_missing	page	meta_invalid_field	9.3.2
 asset_pdf_page_zero	page	meta_invalid_field	9.3.2
+crop_not_an_object	page	crop_invalid	9.3.2
+crop_is_null	page	crop_invalid	9.3.2
+crop_empty	page	crop_invalid	9.3.2
+crop_height_missing	page	crop_invalid	9.3.2
+crop_x_negative	page	crop_invalid	9.3.2
+crop_y_negative	page	crop_invalid	9.3.2
+crop_width_zero	page	crop_invalid	9.3.2
+crop_height_zero	page	crop_invalid	9.3.2
+crop_x_too_large	page	crop_invalid	9.3.2
+crop_width_too_large	page	crop_invalid	9.3.2
+crop_member_is_a_string	page	crop_invalid	9.3.2
+crop_member_is_a_float	page	json_non_integer_number	2.3.5
 asset_duplicate_id	page	duplicate_object_id	8.3

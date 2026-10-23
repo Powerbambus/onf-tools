@@ -15,12 +15,15 @@ enum class ToolType : std::uint16_t {
     Fountain = 1,
     Pencil = 2,
     Highlighter = 3,
-    LineEraser = 4,
 };
+
+// Tool type 4 was the line eraser of ONF 0.3.0 and 0.3.1. It is removed: writers never write it and readers skip such
+// strokes and shapes (spec 7.4.2).
+inline constexpr std::uint16_t kRemovedToolType = 4;
 
 // Spec 7.4.2: an unrecognised tool type is treated as a ballpoint pen.
 constexpr ToolType effective_tool(std::uint16_t raw) noexcept {
-    return raw <= static_cast<std::uint16_t>(ToolType::LineEraser) ? static_cast<ToolType>(raw) : ToolType::Ballpoint;
+    return raw <= static_cast<std::uint16_t>(ToolType::Highlighter) ? static_cast<ToolType>(raw) : ToolType::Ballpoint;
 }
 
 // One vector per field. timestamp is empty when the stroke has NO_TIMESTAMP (the elapsed time is unknown, never 0,
@@ -84,7 +87,7 @@ struct Shape {
     std::uint16_t layer = 0;
     std::optional<MsTime> created_at;
     Color color;
-    std::uint16_t tool_type_raw = 0;      // 0 to 3
+    std::uint16_t tool_type_raw = 0;      // 0 to 3 (a shape with tool type 4 is skipped by the parser)
     ToolType tool = ToolType::Ballpoint;
     std::uint16_t base_width = 0;
     ShapeGeometry geometry;

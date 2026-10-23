@@ -81,6 +81,15 @@ Result<Background, PageError> parse_background(const JsonValue& value, const Con
         auto spacing = context.positive_coord(value, "spacing", ErrorCode::BackgroundInvalidField, "background");
         if (!spacing) return unexpected(std::move(spacing).error());
         background.spacing = spacing.value();
+
+        // top_margin is optional and only read for these three types (spec 6.3.1).
+        if (const JsonValue* margin = value.find("top_margin")) {
+            const std::int64_t* number = margin->get_integer();
+            if (number == nullptr || *number < 0 || *number > kCoordMax) {
+                return context.fail(ErrorCode::BackgroundInvalidField, "background: field \"top_margin\" must be an integer from 0 to 2147483647");
+            }
+            background.top_margin = static_cast<Coord>(*number);
+        }
     }
     return background;
 }
@@ -297,6 +306,26 @@ Result<AssetRef, PageError> parse_asset(const JsonValue& value, const Context& c
         std::int64_t page = 0;
         ONF_TRY_ASSIGN(page, named.integer("pdf_page", 1, limits::kMaxPdfPage));
         asset.pdf_page = static_cast<std::int32_t>(page);
+    } else if (const JsonValue* crop = value.find("crop")) {
+        // crop is for images only; on a PDF placement it is ignored, even if it is not valid (spec 9.3.2).
+        // Whether the region lies inside the image needs the image header and is checked when the asset is
+        // loaded (spec 9.4.5), where a region outside is a corrupt asset and no page error.
+        if (crop->get_object() == nullptr) {
+            return context.fail(ErrorCode::CropInvalid, "asset \"" + asset.id + "\": field \"crop\" must be an object");
+        }
+        const Fields members(context, *crop, "asset \"" + asset.id + "\" crop", ErrorCode::CropInvalid);
+        constexpr std::int64_t kMax = limits::kMaxCropValue;
+        Crop region;
+        std::int64_t x = 0, y = 0, width = 0, height = 0;
+        ONF_TRY_ASSIGN(x, members.integer("x", 0, kMax));
+        ONF_TRY_ASSIGN(y, members.integer("y", 0, kMax));
+        ONF_TRY_ASSIGN(width, members.integer("width", 1, kMax));
+        ONF_TRY_ASSIGN(height, members.integer("height", 1, kMax));
+        region.x = static_cast<std::int32_t>(x);
+        region.y = static_cast<std::int32_t>(y);
+        region.width = static_cast<std::int32_t>(width);
+        region.height = static_cast<std::int32_t>(height);
+        asset.crop = region;
     }
     return asset;
 }

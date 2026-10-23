@@ -44,6 +44,8 @@ public:
     constexpr bool no_pressure() const noexcept { return (raw_ & kNoPressure) != 0; }
     constexpr bool no_timestamp() const noexcept { return (raw_ & kNoTimestamp) != 0; }
     constexpr bool has_created_at() const noexcept { return (raw_ & kHasCreatedAt) != 0; }
+    constexpr bool no_taper_start() const noexcept { return (raw_ & kNoTaperStart) != 0; }  // fountain pen, spec 7.7.3.1
+    constexpr bool no_taper_end() const noexcept { return (raw_ & kNoTaperEnd) != 0; }
 
     friend constexpr bool operator==(StrokeFlags, StrokeFlags) noexcept = default;
 
@@ -53,6 +55,8 @@ private:
     static constexpr std::uint16_t kNoPressure = 1u << 2;
     static constexpr std::uint16_t kNoTimestamp = 1u << 3;
     static constexpr std::uint16_t kHasCreatedAt = 1u << 4;
+    static constexpr std::uint16_t kNoTaperStart = 1u << 5;
+    static constexpr std::uint16_t kNoTaperEnd = 1u << 6;
 
     std::uint16_t raw_ = 0;
 };

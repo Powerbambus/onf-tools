@@ -43,6 +43,18 @@ struct TextObject {
     std::vector<Span> spans;
 };
 
+// The region of an image that is shown, spec 9.3.2 and 9.4.5. Pixels of the decoded image, origin top left.
+// The member values are within their ranges (x, y at least 0, width, height at least 1, all at most 2^31 - 1).
+// That the region lies inside the image is only known once the image header is read.
+struct Crop {
+    std::int32_t x = 0;
+    std::int32_t y = 0;
+    std::int32_t width = 1;
+    std::int32_t height = 1;
+
+    friend bool operator==(const Crop&, const Crop&) = default;
+};
+
 struct AssetRef {
     std::string id;
     std::uint16_t layer = 0;
@@ -50,6 +62,7 @@ struct AssetRef {
     std::string hash;       // 64 lowercase hex digits
     std::string extension;  // as written, may be an extension this version does not know
     std::optional<std::int32_t> pdf_page;  // set for extension "pdf", first page is 1
+    std::optional<Crop> crop;              // images only; a crop on a pdf placement is ignored (spec 9.3.2)
     Coord x = 0;
     Coord y = 0;
     Coord width = 0;   // positive

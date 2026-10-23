@@ -44,9 +44,9 @@ minimal = FIXTURES / "minimal.onf"
 # --- info ---
 code, out, err = run("info", showcase)
 check(code == 0, f"info exits 0, got {code}")
-check("version:     0.3.0" in out and "generator:   make_showcase_onf.py" in out, "info shows version and generator")
-check("6 strokes (285 samples, 1 line erasers), 5 shapes" in out, "info counts strokes, samples and shapes")
-check("3 placements (1 pdf, 2 png)" in out and "layers:      1, 2, 3, 4, 5" in out, "info counts assets and layers")
+check("version:     0.4.0" in out and "generator:   make_showcase_onf.py" in out, "info shows version and generator")
+check("6 strokes (285 samples), 5 shapes" in out, "info counts strokes, samples and shapes")
+check("5 placements (1 pdf, 4 png)" in out and "layers:      1, 2, 3, 4, 5" in out, "info counts assets and layers")
 
 code, out, err = run("info", minimal)
 check(code == 0 and "page 1 (p00002)" in out and "page 2 (p00001)" in out, "pages are listed in display order")
@@ -55,6 +55,7 @@ check(code == 0 and "page 1 (p00002)" in out and "page 2 (p00001)" in out, "page
 code, out, err = run("svg", showcase)
 check(code == 0, f"svg exits 0, got {code}")
 check("missing_asset" in err and "(spec 9.3.2)" in err, "a missing asset is reported on stderr and is not an error")
+check("corrupt_asset" in err and "crop region does not lie inside the image" in err, "a crop outside the image is a corrupt asset, reported and not an error")
 check("missing asset" in out, "a missing asset is drawn as a placeholder with an error indication")
 try:
     document = xml.dom.minidom.parseString(out)
@@ -69,9 +70,13 @@ if document is not None:
     check(svg.getAttribute("viewBox") == "0 0 21000 29700", "the view box is in coord units")
     layer_ids = [g.getAttribute("id") for g in document.getElementsByTagName("g") if g.getAttribute("id").startswith("layer")]
     check(layer_ids == ["layer1", "layer2", "layer3", "layer4", "layer5"], f"layers are drawn in ascending order, got {layer_ids}")
-    check(len(document.getElementsByTagName("mask")) == 1, "one line eraser gives one mask")
+    check(len(document.getElementsByTagName("mask")) == 0, "the SVG has no masks")
     check(len(document.getElementsByTagName("ellipse")) == 1 and len(document.getElementsByTagName("polygon")) == 1, "shapes are drawn")
-    check(len(document.getElementsByTagName("image")) == 1, "the PNG asset is embedded")
+    check(len(document.getElementsByTagName("image")) == 2, "the PNG asset is embedded twice: whole and cropped")
+    nested = [e for e in document.getElementsByTagName("svg") if e is not svg]
+    check(len(nested) == 1 and nested[0].getAttribute("viewBox") == "8 8 16 16", "the cropped placement is a nested SVG whose view box is the region")
+    check(nested and nested[0].getAttribute("width") == "3000" and nested[0].getAttribute("height") == "3000", "the region fills the placement")
+    check(out.count("corrupt asset") == 1 and out.count("missing asset") == 1, "a missing and a corrupt asset each get a placeholder")
     check("mix-blend-mode:multiply" in out, "the highlighter uses multiply")
     check(re.search(r"rotate\(30 14000 5000\)", out) is not None, "the ellipse rotation 3000 is 30 degrees clockwise")
     texts = "".join(t.firstChild.data for t in document.getElementsByTagName("tspan") if t.firstChild)
@@ -106,7 +111,7 @@ with tempfile.TemporaryDirectory() as tmp:
 
     # A file of another ONF version needs the decision of the host (spec 10.2).
     older = Path(tmp) / "older.onf"
-    rewritten(showcase, {"manifest.json": lambda d: d.replace(b'"0.3.0"', b'"0.2.0"')}, older)
+    rewritten(showcase, {"manifest.json": lambda d: d.replace(b'"0.4.0"', b'"0.2.0"')}, older)
     code, out, err = run("info", older)
     check(code == 4 and "unsupported_version" in err, "an unsupported version is rejected and reported")
     code, out, err = run("info", older, "--allow-unsupported-version")

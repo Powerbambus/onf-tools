@@ -41,7 +41,7 @@ void put_chunk(Bytes& out, std::uint16_t type, const Bytes& body) {
 }
 
 constexpr std::uint16_t kHasCreatedAt = 1u << 4;
-constexpr std::uint16_t kDefinedStrokeFlags = 0x001F;
+constexpr std::uint16_t kDefinedStrokeFlags = 0x007F;
 
 // Spec 7.4.1 and 7.5: header, created_at if known, and the delta-coded samples.
 Bytes stroke_body(const Stroke& stroke) {

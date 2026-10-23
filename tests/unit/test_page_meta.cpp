@@ -182,6 +182,26 @@ TEST_CASE("meta: spacing must be a positive 32-bit integer for ruled, grid and d
     }
 }
 
+TEST_CASE("meta: top_margin is optional and must be a non-negative 32-bit integer (spec 6.3.1)") {
+    const auto with_margin = [](const char* type, const std::string& margin) {
+        return meta(std::string(R"({"type":")") + type + R"(","color":"#FFFFFFFF","foreground_color":"#000000FF","spacing":500,"top_margin":)" +
+                    margin + "}");
+    };
+    CHECK(accepted(meta(dotted())).background.top_margin == 0);
+    for (const char* type : {"ruled", "grid", "dotted"}) {
+        CAPTURE(type);
+        CHECK(accepted(with_margin(type, "0")).background.top_margin == 0);
+        CHECK(accepted(with_margin(type, "1000")).background.top_margin == 1000);
+        CHECK(accepted(with_margin(type, "2147483647")).background.top_margin == 2147483647);
+        for (const char* bad : {"-1", "2147483648", "\"10\"", "null", "true", "[]"}) {
+            CAPTURE(bad);
+            CHECK(problem(with_margin(type, bad)) == ErrorCode::BackgroundInvalidField);
+        }
+    }
+    // For other types a reader ignores the member.
+    CHECK(accepted(meta(R"({"type":"blank","color":"#FFFFFFFF","top_margin":"x"})")).background.top_margin == 0);
+}
+
 TEST_CASE("meta: colors") {
     CHECK(accepted(meta(dotted("500", "#abcdef12"))).background.foreground_color == Color{0xAB, 0xCD, 0xEF, 0x12});
     for (const char* bad : {"#FFF", "#FFFFFF", "FFFFFFFF", "#FFFFFFFFF", "#GGGGGGGG", " #FFFFFFFF", "rgb(0,0,0)", ""}) {
@@ -495,4 +515,49 @@ TEST_CASE("meta: asset placements") {
         CHECK(problem(meta_with("", replace_first(asset_json(), key + (key == "\"width\"" ? ":21000" : ":29700"), bad))) == ErrorCode::MetaInvalidField);
     }
     CHECK(problem(meta_with("", "1")) == ErrorCode::MetaInvalidField);
+}
+
+TEST_CASE("meta: crop of an image placement") {
+    const PageMeta whole = accepted(meta_with("", asset_json("png", "")));
+    CHECK_FALSE(whole.assets[0].crop.has_value());
+
+    const PageMeta m = accepted(meta_with("", asset_json("png", R"(,"crop":{"x":120,"y":80,"width":1600,"height":900})")));
+    REQUIRE(m.assets[0].crop.has_value());
+    CHECK(*m.assets[0].crop == Crop{120, 80, 1600, 900});
+
+    // The largest values, the smallest region, and the same for jpg and webp.
+    CHECK(*accepted(meta_with("", asset_json("png", R"(,"crop":{"x":2147483647,"y":2147483647,"width":2147483647,"height":2147483647})"))).assets[0].crop ==
+          Crop{2147483647, 2147483647, 2147483647, 2147483647});
+    CHECK(*accepted(meta_with("", asset_json("webp", R"(,"crop":{"x":0,"y":0,"width":1,"height":1})"))).assets[0].crop == Crop{0, 0, 1, 1});
+    CHECK(accepted(meta_with("", asset_json("jpg", R"(,"crop":{"x":0,"y":0,"width":1,"height":1})"))).assets[0].crop.has_value());
+
+    // Unknown members are ignored (spec 10.5.1), the order does not matter.
+    CHECK(*accepted(meta_with("", asset_json("png", R"(,"crop":{"unit":"px","height":4,"width":3,"y":2,"x":1})"))).assets[0].crop == Crop{1, 2, 3, 4});
+}
+
+TEST_CASE("meta: a crop that breaks a rule of spec 9.3.2 is a page error") {
+    for (const char* bad : {
+             R"(5)", R"("x")", R"(null)", R"(true)", R"([])", R"([0,0,1,1])", R"({})",
+             R"({"y":0,"width":1,"height":1})", R"({"x":0,"width":1,"height":1})", R"({"x":0,"y":0,"height":1})", R"({"x":0,"y":0,"width":1})",
+             R"({"x":-1,"y":0,"width":1,"height":1})", R"({"x":0,"y":-1,"width":1,"height":1})",
+             R"({"x":0,"y":0,"width":0,"height":1})", R"({"x":0,"y":0,"width":1,"height":0})", R"({"x":0,"y":0,"width":-5,"height":1})",
+             R"({"x":2147483648,"y":0,"width":1,"height":1})", R"({"x":0,"y":2147483648,"width":1,"height":1})",
+             R"({"x":0,"y":0,"width":2147483648,"height":1})", R"({"x":0,"y":0,"width":1,"height":2147483648})",
+             R"({"x":"0","y":0,"width":1,"height":1})", R"({"x":null,"y":0,"width":1,"height":1})", R"({"x":true,"y":0,"width":1,"height":1})",
+             R"({"x":[0],"y":0,"width":1,"height":1})"}) {
+        CAPTURE(bad);
+        for (const char* extension : {"png", "jpg", "webp"}) {
+            CAPTURE(extension);
+            CHECK(problem(meta_with("", asset_json(extension, std::string(R"(,"crop":)") + bad))) == ErrorCode::CropInvalid);
+        }
+    }
+}
+
+TEST_CASE("meta: crop is ignored for a pdf placement, even a crop that would be invalid") {
+    for (const char* crop : {R"({"x":-1})", "5", "null", R"({"x":0,"y":0,"width":1,"height":1})"}) {
+        CAPTURE(crop);
+        const PageMeta m = accepted(meta_with("", asset_json("pdf", std::string(R"(,"pdf_page":2,"crop":)") + crop)));
+        CHECK_FALSE(m.assets[0].crop.has_value());
+        CHECK(m.assets[0].pdf_page == 2);
+    }
 }

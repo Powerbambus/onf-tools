@@ -212,9 +212,6 @@ Result<std::optional<Shape>, StrokeParseError> parse_shape(std::span<const std::
     }
     if (shape.layer == 0) return fail(ErrorCode::InkLayerZero, "layer is 0", 14);
     if (shape.base_width == 0) return fail(ErrorCode::StrokeBaseWidthZero, "base_width is 0", 10);
-    if (shape.tool_type_raw == static_cast<std::uint16_t>(ToolType::LineEraser)) {
-        return fail(ErrorCode::ShapeToolTypeInvalid, "a shape cannot have tool type 4", 8);
-    }
 
     const std::uint64_t parameters_offset = cursor.position();
     switch (shape_type) {
@@ -271,12 +268,16 @@ Result<std::vector<InkItem>, PageError> parse_ink(std::span<const std::uint8_t> 
             auto stroke = parse_stroke(chunk.body);
             if (!stroke) return page_failure(stroke.error(), chunk);
             if (!seen_ids.insert(stroke.value().stroke_id).second) return duplicate(stroke.value().stroke_id, chunk);
+            // Tool type 4 was the line eraser of ONF 0.3.0 and 0.3.1: the chunk was parsed and checked like any
+            // other, the stroke is skipped (spec 7.4.2).
+            if (stroke.value().tool_type_raw == kRemovedToolType) continue;
             ink.push_back(std::move(stroke).value());
         } else {
             auto shape = parse_shape(chunk.body);
             if (!shape) return page_failure(shape.error(), chunk);
             if (!shape.value()) continue;  // unknown shape type
             if (!seen_ids.insert(shape.value()->stroke_id).second) return duplicate(shape.value()->stroke_id, chunk);
+            if (shape.value()->tool_type_raw == kRemovedToolType) continue;  // see above
             ink.push_back(std::move(*shape.value()));
         }
     }

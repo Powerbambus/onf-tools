@@ -3,6 +3,7 @@ add_library(onf STATIC
     src/container/central_directory.cpp
     src/container/paths.cpp
     src/container/zip_archive.cpp
+    src/edit/erase.cpp
     src/errors.cpp
     src/primitives/bytecursor.cpp
     src/primitives/sha256.cpp

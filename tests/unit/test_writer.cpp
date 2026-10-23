@@ -141,6 +141,7 @@ WriteDocument make_document() {
     first.meta.background.color = {255, 255, 255, 255};
     first.meta.background.foreground_color = Color{0, 0, 0, 255};
     first.meta.background.spacing = 500;
+    first.meta.background.top_margin = 1000;
 
     Stroke with_time = make_stroke(1, 2, {{10000, 5000, 200}, {10004, 5003, 202}, {10009, 5007, 200}}, true);
     with_time.created_at = 1781433600000ull;
@@ -149,7 +150,9 @@ WriteDocument make_document() {
     with_time.samples.tilt_y = {-4, 0, 90};
     with_time.samples.azimuth = {0, 35999, 100};
     first.ink.push_back(with_time);
-    first.ink.push_back(make_stroke(2, 2, {{-500, -600, 255}, {2147483647, -2147483647 - 1, 255}}, false));
+    Stroke cut = make_stroke(2, 2, {{-500, -600, 255}, {2147483647, -2147483647 - 1, 255}}, false);
+    cut.flags = StrokeFlags{static_cast<std::uint16_t>(cut.flags.raw() | (1u << 5) | (1u << 6))};
+    first.ink.push_back(cut);
     first.ink.push_back(make_ellipse(3, 3));
     Shape line;
     line.stroke_id = 4;
@@ -189,7 +192,9 @@ WriteDocument make_document() {
     image.y = 0;
     image.width = 5000;
     image.height = 3000;
+    image.crop = Crop{1, 2, 30, 20};  // inside the 40 x 30 image
     AssetRef page_of_pdf = image;
+    page_of_pdf.crop.reset();
     page_of_pdf.id = "a2";
     page_of_pdf.hash = sha256_hex(pdf);
     page_of_pdf.extension = "pdf";
@@ -252,6 +257,7 @@ TEST_CASE("writer: a document survives a round trip through a file") {
     CHECK(meta.width == 21000);
     CHECK(meta.background.kind == BackgroundKind::Dotted);
     CHECK(meta.background.spacing == 500);
+    CHECK(meta.background.top_margin == 1000);
 
     REQUIRE(first.value().ink.size() == 4);
     const Stroke& a = std::get<Stroke>(first.value().ink[0]);
@@ -271,6 +277,9 @@ TEST_CASE("writer: a document survives a round trip through a file") {
     const Stroke& b = std::get<Stroke>(first.value().ink[1]);
     CHECK_FALSE(b.created_at.has_value());
     CHECK(b.flags.no_timestamp());
+    CHECK(b.flags.no_taper_start());
+    CHECK(b.flags.no_taper_end());
+    CHECK_FALSE(a.flags.no_taper_start());
     CHECK(b.samples.timestamp.empty());
     CHECK(b.samples.x == std::vector<Coord>{-500, 2147483647});
     CHECK(b.samples.y == std::vector<Coord>{-600, -2147483647 - 1});
@@ -297,6 +306,8 @@ TEST_CASE("writer: a document survives a round trip through a file") {
     CHECK(meta.assets[1].pdf_page == 7);
     CHECK(meta.assets[1].created_at == 1);
     CHECK_FALSE(meta.assets[0].pdf_page.has_value());
+    CHECK(meta.assets[0].crop == Crop{1, 2, 30, 20});
+    CHECK_FALSE(meta.assets[1].crop.has_value());
 
     // The embedded files are found, intact and under their hash.
     const auto image = out.asset(meta.assets[0], "p00001", &sink);
@@ -359,7 +370,7 @@ TEST_CASE("writer: the same document gives the same bytes") {
 }
 
 TEST_CASE("writer: strokes.bin matches the vectors of spec Appendix C byte for byte") {
-    // V1 to V6 as model objects. The expected bytes are the chunks of ink_chunks.tsv, extracted from the specification.
+    // V1 to V7 as model objects. The expected bytes are the chunks of ink_chunks.tsv, extracted from the specification.
     WriteDocument d;
     d.title = "Vectors";
     d.created_at = time_of(2026, 6, 14);
@@ -394,6 +405,19 @@ TEST_CASE("writer: strokes.bin matches the vectors of spec Appendix C byte for b
     v2.samples.pressure = {200, 202};
     v2.samples.timestamp = {0, 8};
     page.ink.push_back(v2);
+
+    Stroke v7;
+    v7.stroke_id = 7;
+    v7.layer = 1;
+    v7.color = {0, 0, 0, 255};
+    v7.tool_type_raw = 1;
+    v7.tool = ToolType::Fountain;
+    v7.base_width = 100;
+    v7.flags = StrokeFlags{0x006C};
+    v7.samples.x = {1000, 1010};
+    v7.samples.y = {2000, 2005};
+    v7.samples.pressure = {255, 255};
+    page.ink.push_back(v7);
 
     Shape v3 = make_ellipse(3, 2);
     page.ink.push_back(v3);
@@ -462,6 +486,14 @@ TEST_CASE("writer: a document that breaks a rule is refused and nothing is writt
         {"page size", [](WriteDocument& d) { d.pages[0].meta.width = 0; }, "width and height"},
         {"background type", [](WriteDocument& d) { d.pages[0].meta.background.type = "lined"; }, "background type"},
         {"background spacing", [](WriteDocument& d) { d.pages[0].meta.background.spacing = 0; }, "spacing"},
+        {"negative top_margin", [](WriteDocument& d) { d.pages[0].meta.background.top_margin = -1; }, "top_margin"},
+        {"top_margin on a blank page", [](WriteDocument& d) {
+             d.pages[0].meta.background.type = "blank";
+             d.pages[0].meta.background.kind = BackgroundKind::Blank;
+             d.pages[0].meta.background.foreground_color.reset();
+             d.pages[0].meta.background.spacing.reset();
+             d.pages[0].meta.background.top_margin = 5;
+         }, "top_margin"},
         {"layer 0", [](WriteDocument& d) { std::get<Stroke>(d.pages[0].ink[0]).layer = 0; }, "layer"},
         {"layer of a shape", [](WriteDocument& d) { std::get<Shape>(d.pages[0].ink[2]).layer = 0; }, "layer"},
         {"layer of text", [](WriteDocument& d) { d.pages[0].meta.text_objects[0].layer = 0; }, "layer"},
@@ -482,7 +514,8 @@ TEST_CASE("writer: a document that breaks a rule is refused and nothing is writt
              s.flags = StrokeFlags{static_cast<std::uint16_t>(s.flags.raw() | 4)};
              s.samples.pressure[0] = 100;
          }, "NO_PRESSURE"},
-        {"reserved flag bit", [](WriteDocument& d) { std::get<Stroke>(d.pages[0].ink[0]).flags = StrokeFlags{static_cast<std::uint16_t>(0x20)}; }, "reserved flag"},
+        {"reserved flag bit", [](WriteDocument& d) { std::get<Stroke>(d.pages[0].ink[0]).flags = StrokeFlags{static_cast<std::uint16_t>(0x80)}; }, "reserved flag"},
+        {"removed tool type 4", [](WriteDocument& d) { std::get<Stroke>(d.pages[0].ink[0]).tool_type_raw = 4; }, "tool type"},
         {"reserved tool type", [](WriteDocument& d) { std::get<Stroke>(d.pages[0].ink[0]).tool_type_raw = 5; }, "tool type"},
         {"base_width 0", [](WriteDocument& d) { std::get<Stroke>(d.pages[0].ink[0]).base_width = 0; }, "base_width"},
         {"shape with the eraser", [](WriteDocument& d) { std::get<Shape>(d.pages[0].ink[2]).tool_type_raw = 4; }, "tool type 0 to 3"},
@@ -501,6 +534,12 @@ TEST_CASE("writer: a document that breaks a rule is refused and nothing is writt
         {"pdf_page for an image", [](WriteDocument& d) { d.pages[0].meta.assets[0].pdf_page = 1; }, "pdf_page"},
         {"unsupported asset format", [](WriteDocument& d) { d.assets.push_back({"gif", {'G', 'I', 'F', '8'}}); }, "format"},
         {"asset that is not what it says", [](WriteDocument& d) { d.assets.push_back({"png", {'n', 'o', 'p', 'e'}}); }, "PNG signature"},
+        {"crop outside the image", [](WriteDocument& d) { d.pages[0].meta.assets[0].crop = Crop{11, 0, 30, 20}; }, "inside the image"},
+        {"crop beyond the height", [](WriteDocument& d) { d.pages[0].meta.assets[0].crop = Crop{0, 11, 30, 20}; }, "inside the image"},
+        {"crop sum overflows", [](WriteDocument& d) { d.pages[0].meta.assets[0].crop = Crop{2147483647, 0, 2147483647, 1}; }, "inside the image"},
+        {"crop negative x", [](WriteDocument& d) { d.pages[0].meta.assets[0].crop = Crop{-1, 0, 5, 5}; }, "at least 0"},
+        {"crop width zero", [](WriteDocument& d) { d.pages[0].meta.assets[0].crop = Crop{0, 0, 0, 5}; }, "at least 1"},
+        {"crop on a pdf", [](WriteDocument& d) { d.pages[0].meta.assets[1].crop = Crop{0, 0, 1, 1}; }, "must not be written for a pdf"},
         {"duplicate asset id", [](WriteDocument& d) { d.pages[0].meta.assets[1].id = "a1"; }, "not unique"},
         {"thumbnail too large", [](WriteDocument& d) { d.thumbnail = make_png(300, 10); }, "256 pixels"},
         {"thumbnail not a PNG", [](WriteDocument& d) { d.thumbnail = Bytes{1, 2, 3}; }, "PNG"},

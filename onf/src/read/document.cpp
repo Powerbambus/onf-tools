@@ -86,6 +86,20 @@ Result<AssetContent, FileError> Document::asset(const AssetRef& placement, std::
         report(DiagnosticKind::CorruptAsset, content.check.detail);
         return content;
     }
+
+    // Spec 9.4.5: the crop region has to lie completely inside the image. Only now are the pixel dimensions known.
+    // A region that does not is a corrupt asset, not a malformed page.
+    if (placement.crop && content.check.width && content.check.height) {
+        const Crop& crop = *placement.crop;
+        const bool inside = static_cast<std::int64_t>(crop.x) + crop.width <= *content.check.width &&
+                            static_cast<std::int64_t>(crop.y) + crop.height <= *content.check.height;
+        if (!inside) {
+            const auto dimensions = content.check;
+            content.check = {AssetStatus::Corrupt, "the crop region does not lie inside the image", dimensions.width, dimensions.height};
+            report(DiagnosticKind::CorruptAsset, content.check.detail);
+            return content;
+        }
+    }
     content.bytes = std::move(bytes).value();
     return content;
 }

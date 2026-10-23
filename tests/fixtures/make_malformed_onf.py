@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Writes tests/fixtures/malformed/*.onf and expected.tsv: one broken ONF 0.3.0 file per case of spec 12.3.
+"""Writes tests/fixtures/malformed/*.onf and expected.tsv: one broken ONF 0.4.0 file per case of spec 12.3.
 
 Every file is a valid document with exactly one thing wrong. expected.tsv says where the reader must stop
 (scope "file" rejects the whole file, "page" makes only that page unreadable, spec 12.3.1) and with which error
@@ -8,6 +8,8 @@ name (onf/include/onf/errors.h). The files are written independently of the C++ 
     make_malformed_onf.py            write the files
 """
 import json
+import random
+import string
 import struct
 import zipfile
 from pathlib import Path
@@ -58,7 +60,7 @@ def strokes_file(chunks, version=2, magic=b"ONFS", end=True):
 
 
 MANIFEST = {
-    "onf_version": "0.3.0", "title": "Malformed", "created_at": "2026-06-14T10:32:00.000Z",
+    "onf_version": "0.4.0", "title": "Malformed", "created_at": "2026-06-14T10:32:00.000Z",
     "modified_at": "2026-06-14T12:15:00.000Z", "pages": [{"id": "p00001", "order": 1}, {"id": "p00002", "order": 2}],
 }
 TEXT = {
@@ -66,6 +68,7 @@ TEXT = {
     "generic_family": "sans-serif", "font_size": 423, "color": "#000000FF", "bold": False, "italic": False,
 }
 ASSET = {"id": "a1", "layer": 1, "hash": "a" * 64, "extension": "pdf", "pdf_page": 1, "x": 0, "y": 0, "width": 100, "height": 100}
+IMAGE = {"id": "a1", "layer": 1, "hash": "a" * 64, "extension": "png", "x": 0, "y": 0, "width": 100, "height": 100}
 META = {
     "width": 21000, "height": 29700,
     "background": {"type": "dotted", "color": "#FFFFFFFF", "foreground_color": "#000000FF", "spacing": 500},
@@ -199,7 +202,6 @@ case("shape_without_shape_type", "page", "shape_header_too_short", "7.3.2", **pa
 case("shape_parameters_truncated", "page", "shape_parameters_truncated", "7.3.2", **page_strokes(strokes_file([chunk(3, shape_body()[:-1])])))
 case("shape_layer_zero", "page", "ink_layer_zero", "5.6", **page_strokes(strokes_file([chunk(3, shape_body(layer=0))])))
 case("shape_base_width_zero", "page", "stroke_base_width_zero", "7.3.2", **page_strokes(strokes_file([chunk(3, shape_body(width=0))])))
-case("shape_tool_eraser", "page", "shape_tool_type_invalid", "7.9.2", **page_strokes(strokes_file([chunk(3, shape_body(tool=4))])))
 case("shape_ellipse_rx_zero", "page", "shape_parameter_invalid", "7.9.4", **page_strokes(strokes_file([chunk(3, shape_body(parameters=struct.pack("<iiiiH", 0, 0, 0, 5, 0)))])))
 case("shape_rectangle_height_negative", "page", "shape_parameter_invalid", "7.9.4",
      **page_strokes(strokes_file([chunk(3, shape_body(shape_type=2, parameters=struct.pack("<iiiiH", 0, 0, 5, -5, 0)))])))
@@ -212,6 +214,14 @@ case("meta_width_missing", "page", "meta_invalid_field", "6.2.2", **page_meta({k
 case("meta_width_zero", "page", "meta_invalid_field", "6.2.2", **page_meta(with_meta(width=0)))
 case("meta_background_field_missing", "page", "background_invalid_field", "6.3.1",
      **page_meta(with_meta(background={"type": "dotted", "color": "#FFFFFFFF", "foreground_color": "#000000FF"})))
+def with_margin(value):
+    return page_meta(with_meta(background={"type": "ruled", "color": "#FFFFFFFF", "foreground_color": "#000000FF", "spacing": 500, "top_margin": value}))
+
+
+case("meta_top_margin_negative", "page", "background_invalid_field", "6.3.1", **with_margin(-1))
+case("meta_top_margin_too_large", "page", "background_invalid_field", "6.3.1", **with_margin(2147483648))
+case("meta_top_margin_string", "page", "background_invalid_field", "6.3.1", **with_margin("10"))
+case("meta_top_margin_fraction", "page", "json_non_integer_number", "2.3.5", **with_margin(1.5))
 case("meta_text_objects_not_an_array", "page", "meta_invalid_field", "6.2.2", **page_meta(with_meta(text_objects={})))
 case("text_layer_zero", "page", "layer_invalid", "5.6", **page_meta(with_meta(text_objects=[{**TEXT, "layer": 0}])))
 case("text_layer_too_large", "page", "layer_invalid", "5.6", **page_meta(with_meta(text_objects=[{**TEXT, "layer": 65536}])))
@@ -219,7 +229,9 @@ case("text_layer_is_a_string", "page", "meta_invalid_field", "5.6", **page_meta(
 case("text_layer_missing", "page", "meta_invalid_field", "8.3", **page_meta(with_meta(text_objects=[{k: v for k, v in TEXT.items() if k != "layer"}])))
 case("text_font_size_zero", "page", "meta_invalid_field", "8.3", **page_meta(with_meta(text_objects=[{**TEXT, "font_size": 0}])))
 case("text_duplicate_id", "page", "duplicate_object_id", "8.3", **page_meta(with_meta(text_objects=[TEXT, TEXT])))
-case("asset_string_too_long", "page", "json_string_too_long", "12.6", **page_meta(with_meta(assets=[{**ASSET, "extension": "x" * 70000}])))
+# The string is not repetitive, so that the compression ratio rule of spec 4.7 does not decide the case.
+LONG_STRING = "".join(random.Random(7).choice(string.ascii_lowercase) for _ in range(70000))
+case("asset_string_too_long", "page", "json_string_too_long", "12.6", **page_meta(with_meta(assets=[{**ASSET, "extension": LONG_STRING}])))
 case("spans_overlap", "page", "spans_invalid", "8.3.1", **page_meta(with_meta(text_objects=[{**TEXT, "spans": [{"start": 0, "end": 3}, {"start": 2, "end": 4}]}])))
 case("spans_beyond_content", "page", "spans_invalid", "8.3.1", **page_meta(with_meta(text_objects=[{**TEXT, "spans": [{"start": 0, "end": 6}]}])))
 case("spans_not_sorted", "page", "spans_invalid", "8.3.1", **page_meta(with_meta(text_objects=[{**TEXT, "spans": [{"start": 3, "end": 4}, {"start": 0, "end": 1}]}])))
@@ -232,6 +244,18 @@ case("asset_hash_uppercase", "page", "invalid_identifier", "4.6.1", **page_meta(
 case("asset_hash_traversal", "page", "invalid_identifier", "4.6.1", **page_meta(with_meta(assets=[{**ASSET, "hash": "../" + "a" * 61}])))
 case("asset_pdf_page_missing", "page", "meta_invalid_field", "9.3.2", **page_meta(with_meta(assets=[{k: v for k, v in ASSET.items() if k != "pdf_page"}])))
 case("asset_pdf_page_zero", "page", "meta_invalid_field", "9.3.2", **page_meta(with_meta(assets=[{**ASSET, "pdf_page": 0}])))
+for name, crop in [("crop_not_an_object", 5), ("crop_is_null", None), ("crop_empty", {}),
+                   ("crop_height_missing", {"x": 0, "y": 0, "width": 1}),
+                   ("crop_x_negative", {"x": -1, "y": 0, "width": 1, "height": 1}),
+                   ("crop_y_negative", {"x": 0, "y": -1, "width": 1, "height": 1}),
+                   ("crop_width_zero", {"x": 0, "y": 0, "width": 0, "height": 1}),
+                   ("crop_height_zero", {"x": 0, "y": 0, "width": 1, "height": 0}),
+                   ("crop_x_too_large", {"x": 2147483648, "y": 0, "width": 1, "height": 1}),
+                   ("crop_width_too_large", {"x": 0, "y": 0, "width": 2147483648, "height": 1}),
+                   ("crop_member_is_a_string", {"x": "0", "y": 0, "width": 1, "height": 1})]:
+    case(name, "page", "crop_invalid", "9.3.2", **page_meta(with_meta(assets=[{**IMAGE, "crop": crop}])))
+case("crop_member_is_a_float", "page", "json_non_integer_number", "2.3.5",
+     raw_metas={"p00001": json.dumps(with_meta(assets=[{**IMAGE, "crop": {"x": 0, "y": 0, "width": 1, "height": 1}}])).replace('"x": 0,', '"x": 0.5,', 1).encode()})
 case("asset_duplicate_id", "page", "duplicate_object_id", "8.3", **page_meta(with_meta(assets=[ASSET, ASSET])))
 
 

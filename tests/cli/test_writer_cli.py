@@ -83,6 +83,29 @@ with tempfile.TemporaryDirectory() as tmp:
     check(run(WRITER, "rewrite", out, again)[0] == 0, "rewriting the result works")
     check(out.read_bytes() == again.read_bytes(), "a second rewrite gives the same bytes")
 
+    # A cropped image survives the rewrite (spec 9.3.2, 9.4.5). The showcase file minus its broken placements.
+    import json
+    complete = tmp / "complete.onf"
+
+    def drop_broken(data):
+        meta = json.loads(data)
+        meta["assets"] = [a for a in meta["assets"] if a["id"] in ("a00001", "a00002", "a00004")]
+        return json.dumps(meta).encode()
+
+    rewritten(showcase, {"pages/p00001/meta.json": drop_broken}, complete)
+    copy = tmp / "complete_copy.onf"
+    code, stdout, stderr = run(WRITER, "rewrite", complete, copy)
+    check(code == 0, f"a document with a cropped image can be rewritten, got {code}: {stderr}")
+    with zipfile.ZipFile(copy) as archive:
+        meta = json.loads(archive.read("pages/p00001/meta.json"))
+        crops = [a.get("crop") for a in meta["assets"]]
+        check({"x": 8, "y": 8, "width": 16, "height": 16} in crops, "the crop is written again")
+        check(crops.count(None) == 2, "the placements without a crop stay without one")
+    before = run(READER, "svg", complete)
+    after = run(READER, "svg", copy)
+    check(before[0] == 0 and after[0] == 0 and before[1] == after[1] and "viewBox=\"8 8 16 16\"" in after[1],
+          "the cropped page draws the same SVG after the rewrite")
+
     # --- what cannot be copied faithfully ---
     refused = tmp / "refused.onf"
     code, stdout, stderr = run(WRITER, "rewrite", showcase, refused)
@@ -102,11 +125,11 @@ with tempfile.TemporaryDirectory() as tmp:
     check(run(WRITER, "rewrite", minimal, tmp / "no_such_directory" / "x.onf")[0] == 5, "an output in a missing directory is a write error")
 
     older = tmp / "older.onf"
-    rewritten(minimal, {"manifest.json": lambda d: d.replace(b'"0.3.0"', b'"0.2.0"')}, older)
+    rewritten(minimal, {"manifest.json": lambda d: d.replace(b'"0.4.0"', b'"0.2.0"')}, older)
     code, stdout, stderr = run(WRITER, "rewrite", older, refused)
     check(code == 4 and not refused.exists(), "an unsupported version is rejected")
     code, stdout, stderr = run(WRITER, "rewrite", older, refused, "--allow-unsupported-version")
-    check(code == 0 and 'version:     0.3.0' in run(READER, "info", refused)[1], "--allow-unsupported-version rewrites it as 0.3.0")
+    check(code == 0 and 'version:     0.4.0' in run(READER, "info", refused)[1], "--allow-unsupported-version rewrites it as 0.4.0")
 
 print("onf-writer cli:", "FAILED" if failures else "ok", f"({len(failures)} failures)")
 sys.exit(1 if failures else 0)

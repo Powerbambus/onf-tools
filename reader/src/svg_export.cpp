@@ -76,6 +76,7 @@ std::string background(const PageMeta& meta) {
     if (!bg.foreground_color || !bg.spacing) return out.str();  // blank, or a type this reader does not know
     const Color& fg = *bg.foreground_color;
     const std::int64_t spacing = *bg.spacing;
+    const std::int64_t top_margin = bg.top_margin;
 
     switch (bg.kind) {
         case BackgroundKind::Ruled:
@@ -83,11 +84,12 @@ std::string background(const PageMeta& meta) {
             // One physical pixel wide, at 20% of the line colour's opacity, none at coordinate 0.
             out << "<g stroke=\"" << rgb(fg) << "\" stroke-opacity=\"" << num(0.2 * alpha_of(fg)) << "\" stroke-width=\"1\" fill=\"none\">\n";
             for (std::int64_t y = spacing; y <= meta.height; y += spacing) {
+                if (y < top_margin) continue;
                 out << "<line x1=\"0\" y1=\"" << y << "\" x2=\"" << meta.width << "\" y2=\"" << y << "\" vector-effect=\"non-scaling-stroke\"/>\n";
             }
             if (bg.kind == BackgroundKind::Grid) {
                 for (std::int64_t x = spacing; x <= meta.width; x += spacing) {
-                    out << "<line x1=\"" << x << "\" y1=\"0\" x2=\"" << x << "\" y2=\"" << meta.height << "\" vector-effect=\"non-scaling-stroke\"/>\n";
+                    out << "<line x1=\"" << x << "\" y1=\"" << top_margin << "\" x2=\"" << x << "\" y2=\"" << meta.height << "\" vector-effect=\"non-scaling-stroke\"/>\n";
                 }
             }
             out << "</g>\n";
@@ -98,6 +100,7 @@ std::string background(const PageMeta& meta) {
             out << "<g fill=\"" << rgb(fg) << "\" fill-opacity=\"" << num(0.25 * alpha_of(fg)) << "\">\n";
             const double radius = 0.1 * static_cast<double>(spacing);
             for (std::int64_t y = spacing; y <= meta.height; y += spacing) {
+                if (y < top_margin) continue;
                 for (std::int64_t x = spacing; x <= meta.width; x += spacing) {
                     out << "<circle cx=\"" << x << "\" cy=\"" << y << "\" r=\"" << num(radius) << "\"/>\n";
                 }
@@ -126,18 +129,17 @@ ToolRules rules_for(ToolType tool) {
         case ToolType::Fountain:    return {0.1, 1.0, true, false};
         case ToolType::Pencil:      return {1.0, 0.2, false, false};
         case ToolType::Highlighter: return {1.0, 1.0, false, true};
-        case ToolType::LineEraser:  return {0.6, 1.0, false, false};
         case ToolType::Ballpoint:
         default:                    return {0.4, 1.0, false, false};
     }
 }
 
 // Spec 7.7.3.1: K = floor(0.05 * N); the first and last K samples are scaled down.
-double taper_factor(std::size_t index, std::size_t count) {
+double taper_factor(std::size_t index, std::size_t count, bool start, bool end) {
     const std::size_t k = count / 20;
     if (k == 0) return 1.0;
-    if (index < k) return static_cast<double>(index) / static_cast<double>(k);
-    if (index + 1 + k > count) return static_cast<double>(count - 1 - index) / static_cast<double>(k);
+    if (start && index < k) return static_cast<double>(index) / static_cast<double>(k);
+    if (end && index + 1 + k > count) return static_cast<double>(count - 1 - index) / static_cast<double>(k);
     return 1.0;
 }
 
@@ -153,28 +155,28 @@ double pressure_at(const Stroke& stroke, std::size_t i) {
     return stroke.flags.no_pressure() ? 1.0 : stroke.samples.pressure[i] / 255.0;
 }
 
-// A stroke as SVG. For the eraser the same function draws the mask shape in black.
-std::string stroke_svg(const Stroke& stroke, bool as_mask) {
+// A stroke as SVG.
+std::string stroke_svg(const Stroke& stroke) {
     const ToolRules rules = rules_for(stroke.tool);
     const SampleColumns& s = stroke.samples;
     const std::size_t n = s.size();
     const double base = stroke.base_width;
-    const Color color = as_mask ? Color{0, 0, 0, 255} : stroke.color;
+    const Color& color = stroke.color;
     const bool is_pencil = stroke.tool == ToolType::Pencil;
-    const double group_opacity = as_mask || is_pencil ? 1.0 : alpha_of(color);
+    const double group_opacity = is_pencil ? 1.0 : alpha_of(color);
 
-    std::string out = group_open(color, group_opacity, !as_mask && rules.multiply);
+    std::string out = group_open(color, group_opacity, rules.multiply);
 
     const auto width_at = [&](std::size_t i) {
         double w = base * lerp(rules.min_width, 1.0, pressure_at(stroke, i));
-        if (rules.taper) w *= taper_factor(i, n);
+        if (rules.taper) w *= taper_factor(i, n, !stroke.flags.no_taper_start(), !stroke.flags.no_taper_end());
         return w;
     };
 
     if (n == 1) {
         // A single sample is a filled circle of base_width in diameter, whatever the pressure (spec 7.8).
         double opacity = 1.0;
-        if (is_pencil && !as_mask) opacity = alpha_of(color) * lerp(rules.min_opacity, 1.0, pressure_at(stroke, 0));
+        if (is_pencil) opacity = alpha_of(color) * lerp(rules.min_opacity, 1.0, pressure_at(stroke, 0));
         out += "<circle cx=\"" + std::to_string(s.x[0]) + "\" cy=\"" + std::to_string(s.y[0]) + "\" r=\"" + num(base / 2) +
                "\" stroke=\"none\"" + (opacity < 1.0 ? " fill-opacity=\"" + num(opacity) + "\"" : "") + "/>\n";
         return out + "</g>\n";
@@ -193,7 +195,7 @@ std::string stroke_svg(const Stroke& stroke, bool as_mask) {
     for (std::size_t i = 0; i + 1 < n; ++i) {
         const double w = (width_at(i) + width_at(i + 1)) / 2;
         std::string opacity;
-        if (is_pencil && !as_mask) {
+        if (is_pencil) {
             const double o = alpha_of(color) * lerp(rules.min_opacity, 1.0, (pressure_at(stroke, i) + pressure_at(stroke, i + 1)) / 2);
             opacity = " stroke-opacity=\"" + num(o) + "\"";
         }
@@ -246,29 +248,14 @@ std::string shape_svg(const Shape& shape) {
     return out + "</g>\n";
 }
 
-// All ink of one layer. A line eraser masks the ink that came before it in this layer, nothing else (spec 7.4.4).
-std::string ink_svg(const std::vector<const InkItem*>& ink, std::string& defs, int& mask_counter, const PageMeta& meta) {
-    std::string accumulated;
+// All ink of one layer, in file order.
+std::string ink_svg(const std::vector<const InkItem*>& ink) {
+    std::string out;
     for (const InkItem* item : ink) {
-        if (const Shape* shape = std::get_if<Shape>(item)) {
-            accumulated += shape_svg(*shape);
-            continue;
-        }
-        const Stroke& stroke = std::get<Stroke>(*item);
-        if (stroke.tool != ToolType::LineEraser) {
-            accumulated += stroke_svg(stroke, false);
-            continue;
-        }
-        const std::string id = "erase" + std::to_string(++mask_counter);
-        defs += "<mask id=\"" + id + "\" maskUnits=\"userSpaceOnUse\" x=\"" + std::to_string(-static_cast<std::int64_t>(meta.width)) + "\" y=\"" +
-                std::to_string(-static_cast<std::int64_t>(meta.height)) + "\" width=\"" + std::to_string(3 * static_cast<std::int64_t>(meta.width)) +
-                "\" height=\"" + std::to_string(3 * static_cast<std::int64_t>(meta.height)) + "\">\n<rect x=\"" +
-                std::to_string(-static_cast<std::int64_t>(meta.width)) + "\" y=\"" + std::to_string(-static_cast<std::int64_t>(meta.height)) +
-                "\" width=\"" + std::to_string(3 * static_cast<std::int64_t>(meta.width)) + "\" height=\"" +
-                std::to_string(3 * static_cast<std::int64_t>(meta.height)) + "\" fill=\"white\"/>\n" + stroke_svg(stroke, true) + "</mask>\n";
-        accumulated = "<g mask=\"url(#" + id + ")\">\n" + accumulated + "</g>\n";
+        if (const Shape* shape = std::get_if<Shape>(item)) out += shape_svg(*shape);
+        else out += stroke_svg(std::get<Stroke>(*item));
     }
-    return accumulated;
+    return out;
 }
 
 // ---------------------------------------------------------------------------
@@ -423,9 +410,20 @@ std::string asset_svg(const Document& document, const std::string& page_id, cons
         return placeholder(ref, "PDF page " + std::to_string(ref.pdf_page.value_or(1)) + " (not rendered by onf-reader)", false);
     }
     const char* mime = ref.extension == "png" ? "image/png" : ref.extension == "jpg" ? "image/jpeg" : "image/webp";
+    const std::string uri = std::string("data:") + mime + ";base64," + base64_encode(content.value().bytes);
+
+    if (ref.crop && check.width && check.height) {
+        // Only the region of the image is shown and scaled to fill the placement (spec 9.4.3, 9.4.5): a nested
+        // SVG whose view box is the region, with the whole image drawn in pixel coordinates inside it.
+        const Crop& crop = *ref.crop;
+        return "<svg x=\"" + std::to_string(ref.x) + "\" y=\"" + std::to_string(ref.y) + "\" width=\"" + std::to_string(ref.width) + "\" height=\"" +
+               std::to_string(ref.height) + "\" viewBox=\"" + std::to_string(crop.x) + " " + std::to_string(crop.y) + " " + std::to_string(crop.width) +
+               " " + std::to_string(crop.height) + "\" preserveAspectRatio=\"none\" overflow=\"hidden\">\n<image x=\"0\" y=\"0\" width=\"" +
+               std::to_string(*check.width) + "\" height=\"" + std::to_string(*check.height) +
+               "\" preserveAspectRatio=\"none\" style=\"image-orientation:none\" href=\"" + uri + "\"/>\n</svg>\n";
+    }
     return "<image x=\"" + std::to_string(ref.x) + "\" y=\"" + std::to_string(ref.y) + "\" width=\"" + std::to_string(ref.width) + "\" height=\"" +
-           std::to_string(ref.height) + "\" preserveAspectRatio=\"none\" style=\"image-orientation:none\" href=\"data:" + mime + ";base64," +
-           base64_encode(content.value().bytes) + "\"/>\n";
+           std::to_string(ref.height) + "\" preserveAspectRatio=\"none\" style=\"image-orientation:none\" href=\"" + uri + "\"/>\n";
 }
 
 }  // namespace
@@ -443,13 +441,12 @@ std::string export_page_svg(const Document& document, const Page& page, Diagnost
 
     std::string defs;
     std::string body;
-    int mask_counter = 0;
     int clip_counter = 0;
     for (const auto& [layer, content] : layers) {
         body += "<g id=\"layer" + std::to_string(layer) + "\">\n";
         for (const AssetRef* asset : content.assets) body += asset_svg(document, page.id, *asset, sink);
         for (const TextObject* text : content.texts) body += text_svg(*text, defs, clip_counter);
-        body += ink_svg(content.ink, defs, mask_counter, meta);
+        body += ink_svg(content.ink);
         body += "</g>\n";
     }
 

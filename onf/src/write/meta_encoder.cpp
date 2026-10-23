@@ -94,6 +94,14 @@ JsonValue asset_to_json(const AssetRef& asset) {
     json_add(out, "hash", json_string(asset.hash));
     json_add(out, "extension", json_string(asset.extension));
     if (asset.pdf_page) json_add(out, "pdf_page", json_integer(*asset.pdf_page));
+    if (asset.crop) {
+        JsonValue crop = json_object();
+        json_add(crop, "x", json_integer(asset.crop->x));
+        json_add(crop, "y", json_integer(asset.crop->y));
+        json_add(crop, "width", json_integer(asset.crop->width));
+        json_add(crop, "height", json_integer(asset.crop->height));
+        json_add(out, "crop", std::move(crop));
+    }
     json_add(out, "x", json_integer(asset.x));
     json_add(out, "y", json_integer(asset.y));
     json_add(out, "width", json_integer(asset.width));
@@ -115,6 +123,7 @@ JsonValue page_meta_to_json(const PageMeta& meta) {
     json_add(background, "color", json_string(format_color(meta.background.color)));
     if (meta.background.foreground_color) json_add(background, "foreground_color", json_string(format_color(*meta.background.foreground_color)));
     if (meta.background.spacing) json_add(background, "spacing", json_integer(*meta.background.spacing));
+    if (meta.background.top_margin > 0) json_add(background, "top_margin", json_integer(meta.background.top_margin));
     json_add(out, "background", std::move(background));
 
     JsonValue texts = json_array();

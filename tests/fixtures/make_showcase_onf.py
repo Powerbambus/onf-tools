@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
-"""Writes tests/fixtures/valid/showcase.onf, an ONF 0.3.0 file that uses most features, independently of the C++ code.
+"""Writes tests/fixtures/valid/showcase.onf, an ONF 0.4.0 file that uses most features, independently of the C++ code.
 
-One page with: all four pen tools, a line eraser, the four shape types with rotation, text with spans on several
-layers, a PNG placement and a PDF placement. It is meant for looking at the output of onf-reader svg, and as a
+One page with: all four pen tools, a fountain pen stroke without taper, the four shape types with rotation, text with spans on several
+layers, a PNG placement, a cropped PNG placement, a crop that lies outside the image (drawn as a placeholder), and a PDF placement. It is meant for looking at the output of onf-reader svg, and as a
 file for the command line tests (tests/cli/test_reader_cli.py).
 """
 import hashlib
@@ -16,6 +16,7 @@ from pathlib import Path
 OUT = Path(__file__).resolve().parent / "valid" / "showcase.onf"
 
 NO_PRESSURE, NO_TIMESTAMP, HAS_CREATED_AT = 1 << 2, 1 << 3, 1 << 4
+NO_TAPER_START, NO_TAPER_END = 1 << 5, 1 << 6
 
 
 def leb128(value):
@@ -88,7 +89,7 @@ ink.append(stroke(2, (120, 20, 20, 255), 1, 260, 3, wave(2000, 6000, 8000, 700, 
 ink.append(stroke(3, (20, 100, 20, 255), 2, 200, 3, wave(2000, 8000, 8000, 700, 80, ramp)))        # pencil, opacity from pressure
 ink.append(stroke(4, (255, 230, 0, 0x66), 3, 900, 3, [(2000, 4800, 255), (10000, 5200, 255)]))  # highlighter
 ink.append(stroke(5, (0, 0, 0, 255), 0, 100, 3, [(6000, 5000, 255)], NO_PRESSURE))                 # one sample: a dot
-ink.append(stroke(6, (0, 0, 0, 255), 4, 500, 3, [(5200, 3300, 255), (5200, 9300, 255)], NO_PRESSURE))  # line eraser across the strokes
+ink.append(stroke(6, (0, 0, 0, 255), 1, 500, 3, [(5200, 3300, 255), (5200, 9300, 255)], NO_PRESSURE | NO_TAPER_START | NO_TAPER_END))  # cut ends
 ink.append(shape(7, (200, 0, 0, 255), 0, 120, 3, 1, struct.pack("<iiiiH", 14000, 5000, 2500, 1200, 3000)))   # ellipse
 ink.append(shape(8, (0, 0, 200, 255), 0, 120, 3, 2, struct.pack("<iiiiH", 14000, 8000, 3000, 1500, 1500)))   # rectangle
 ink.append(shape(9, (0, 0, 0, 255), 1, 150, 3, 3, struct.pack("<iiii", 12000, 10000, 16000, 10600)))        # line
@@ -112,16 +113,22 @@ text_note = {
 }
 meta = {
     "width": 21000, "height": 29700,
-    "background": {"type": "grid", "color": "#FFFFF8FF", "foreground_color": "#2244AAFF", "spacing": 500},
+    "background": {"type": "grid", "color": "#FFFFF8FF", "foreground_color": "#2244AAFF", "spacing": 500, "top_margin": 1000},
     "text_objects": [text_title, text_note],
     "assets": [
         {"id": "a00001", "layer": 1, "hash": image_hash, "extension": "png", "x": 14000, "y": 13000, "width": 5000, "height": 3000},
         {"id": "a00002", "layer": 1, "hash": pdf_hash, "extension": "pdf", "pdf_page": 2, "x": 14000, "y": 17000, "width": 5000, "height": 7000},
         {"id": "a00003", "layer": 1, "hash": "0" * 64, "extension": "png", "x": 2000, "y": 18000, "width": 5000, "height": 3000},
+        # the middle of the 32 x 32 image, scaled to fill the placement (spec 9.4.5)
+        {"id": "a00004", "layer": 1, "hash": image_hash, "extension": "png", "crop": {"x": 8, "y": 8, "width": 16, "height": 16},
+         "x": 8000, "y": 18000, "width": 3000, "height": 3000},
+        # a region that is not inside the image: a corrupt asset, the page stays readable
+        {"id": "a00005", "layer": 1, "hash": image_hash, "extension": "png", "crop": {"x": 20, "y": 20, "width": 20, "height": 20},
+         "x": 8000, "y": 22000, "width": 3000, "height": 3000},
     ],
 }
 manifest = {
-    "onf_version": "0.3.0", "generator": "make_showcase_onf.py", "title": "Showcase",
+    "onf_version": "0.4.0", "generator": "make_showcase_onf.py", "title": "Showcase",
     "created_at": "2026-06-14T10:32:00.000Z", "modified_at": "2026-06-14T12:15:00.000Z",
     "pages": [{"id": "p00001", "order": 1}],
 }

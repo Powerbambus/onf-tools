@@ -19,6 +19,7 @@ struct Background {
     Color color;
     std::optional<Color> foreground_color;  // set for ruled, grid and dotted
     std::optional<Coord> spacing;           // set for ruled, grid and dotted, always positive
+    Coord top_margin = 0;                   // ruled, grid and dotted: free area at the top (spec 6.3.2), 0 if absent
 };
 
 struct PageMeta {

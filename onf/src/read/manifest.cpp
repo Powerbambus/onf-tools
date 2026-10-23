@@ -64,7 +64,7 @@ Result<Version, FileError> parse_manifest_version(const JsonValue& root) {
     auto text = required_string(root, "onf_version");
     if (!text) return unexpected(std::move(text).error());
     const auto version = parse_version(*text.value());
-    if (!version) return fail(ErrorCode::ManifestInvalidField, "field \"onf_version\" is not a version like 0.3.0");
+    if (!version) return fail(ErrorCode::ManifestInvalidField, "field \"onf_version\" is not a version like 0.4.0");
     return *version;
 }
 

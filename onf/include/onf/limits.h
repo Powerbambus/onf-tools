@@ -73,5 +73,6 @@ inline constexpr std::uint32_t kMaxSpans = 65535;
 
 // 9.3.2
 inline constexpr std::int64_t kMaxPdfPage = 2147483647;
+inline constexpr std::int64_t kMaxCropValue = 2147483647;
 
 }  // namespace onf::limits

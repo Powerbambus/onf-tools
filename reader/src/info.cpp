@@ -29,13 +29,12 @@ void print_page(const Page& page, std::ostream& out) {
     out << "    size:        " << millimetres(meta.width) << " x " << millimetres(meta.height) << "\n";
     out << "    background:  " << meta.background.type << "\n";
 
-    std::size_t strokes = 0, shapes = 0, samples = 0, erasers = 0;
+    std::size_t strokes = 0, shapes = 0, samples = 0;
     std::set<std::uint16_t> layers;
     for (const InkItem& item : page.ink) {
         if (const Stroke* stroke = std::get_if<Stroke>(&item)) {
             ++strokes;
             samples += stroke->samples.size();
-            if (stroke->tool == ToolType::LineEraser) ++erasers;
             layers.insert(stroke->layer);
         } else {
             ++shapes;
@@ -45,7 +44,7 @@ void print_page(const Page& page, std::ostream& out) {
     for (const TextObject& text : meta.text_objects) layers.insert(text.layer);
     for (const AssetRef& asset : meta.assets) layers.insert(asset.layer);
 
-    out << "    ink:         " << strokes << " strokes (" << samples << " samples, " << erasers << " line erasers), " << shapes << " shapes\n";
+    out << "    ink:         " << strokes << " strokes (" << samples << " samples), " << shapes << " shapes\n";
     out << "    text:        " << meta.text_objects.size() << " text objects\n";
 
     std::map<std::string, std::size_t> by_extension;

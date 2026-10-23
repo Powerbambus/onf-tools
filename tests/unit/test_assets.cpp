@@ -215,7 +215,7 @@ ZipEntrySpec entry(std::string name, const Bytes& data) {
 
 Document document_with(const std::vector<std::pair<std::string, Bytes>>& assets) {
     ZipSpec spec;
-    spec.entries.push_back(entry("manifest.json", text_bytes(R"({"onf_version":"0.3.0","title":"T","created_at":"2026-06-14T10:32:00.000Z",)"
+    spec.entries.push_back(entry("manifest.json", text_bytes(R"({"onf_version":"0.4.0","title":"T","created_at":"2026-06-14T10:32:00.000Z",)"
                                                              R"("modified_at":"2026-06-14T12:15:00.000Z","pages":[{"id":"p00001","order":1}]})")));
     spec.entries.push_back(entry("pages/p00001/meta.json", text_bytes(kMeta)));
     Bytes strokes = file_header();
@@ -341,4 +341,51 @@ TEST_CASE("document: one PDF file serves many placements") {
     const Document document = document_with({{first.hash + ".pdf", pdf}});
     CHECK(document.asset(first, "p00001").value().check.status == AssetStatus::Ok);
     CHECK(document.asset(second, "p00001").value().bytes == pdf);
+}
+
+TEST_CASE("document: a crop region has to lie inside the image (spec 9.4.5)") {
+    const Bytes data = png(40, 30);
+    const Document document = document_with({{sha256_hex(data) + ".png", data}});
+
+    const auto status_for = [&](Crop crop, DiagnosticsSink* sink = nullptr) {
+        AssetRef ref = placement(data, "png");
+        ref.crop = crop;
+        const auto result = document.asset(ref, "p00001", sink);
+        REQUIRE(result.has_value());
+        return result.value().check.status;
+    };
+
+    // The whole image, one pixel in each corner, and a region in the middle.
+    CHECK(status_for({0, 0, 40, 30}) == AssetStatus::Ok);
+    CHECK(status_for({39, 29, 1, 1}) == AssetStatus::Ok);
+    CHECK(status_for({0, 0, 1, 1}) == AssetStatus::Ok);
+    CHECK(status_for({10, 5, 20, 20}) == AssetStatus::Ok);
+
+    // One pixel too far on either side is a corrupt asset, and the host is told.
+    CollectingSink sink;
+    CHECK(status_for({1, 0, 40, 30}, &sink) == AssetStatus::Corrupt);
+    REQUIRE(sink.items().size() == 1);
+    CHECK(sink.items()[0].kind == DiagnosticKind::CorruptAsset);
+    CHECK(sink.items()[0].detail.find("crop") != std::string::npos);
+    CHECK(status_for({0, 1, 40, 30}) == AssetStatus::Corrupt);
+    CHECK(status_for({0, 0, 41, 30}) == AssetStatus::Corrupt);
+    CHECK(status_for({0, 0, 40, 31}) == AssetStatus::Corrupt);
+    CHECK(status_for({40, 0, 1, 1}) == AssetStatus::Corrupt);
+
+    // The sum of the largest values does not overflow.
+    CHECK(status_for({2147483647, 2147483647, 2147483647, 2147483647}) == AssetStatus::Corrupt);
+
+    // A corrupt asset gives no bytes; without a crop the same file is fine.
+    AssetRef outside = placement(data, "png");
+    outside.crop = Crop{0, 0, 41, 1};
+    CHECK(document.asset(outside, "p00001").value().bytes.empty());
+    CHECK(document.asset(placement(data, "png"), "p00001").value().bytes == data);
+}
+
+TEST_CASE("document: the pixel limit applies to the whole image, not to the region") {
+    const Bytes huge = png(20000, 20000);
+    const Document document = document_with({{sha256_hex(huge) + ".png", huge}});
+    AssetRef ref = placement(huge, "png");
+    ref.crop = Crop{0, 0, 10, 10};
+    CHECK(document.asset(ref, "p00001").value().check.status == AssetStatus::Corrupt);
 }

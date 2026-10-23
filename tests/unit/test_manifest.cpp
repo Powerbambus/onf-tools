@@ -19,7 +19,7 @@ using namespace onf::test;
 namespace {
 
 const std::string kSpecExample = R"({
-    "onf_version": "0.3.0",
+    "onf_version": "0.4.0",
     "title": "Lecture Notes",
     "created_at": "2026-06-14T10:32:00.000Z",
     "modified_at": "2026-06-14T12:15:00.000Z",
@@ -35,7 +35,7 @@ std::string page(const std::string& id, long order) {
 }
 
 std::string manifest_with_pages(const std::string& pages) {
-    return R"({"onf_version":"0.3.0","title":"T","created_at":"2026-06-14T10:32:00.000Z",)"
+    return R"({"onf_version":"0.4.0","title":"T","created_at":"2026-06-14T10:32:00.000Z",)"
            R"("modified_at":"2026-06-14T12:15:00.000Z","pages":[)" +
            pages + "]}";
 }
@@ -91,7 +91,7 @@ TEST_CASE("manifest: the example from spec 6.1.1") {
     const auto result = manifest_of(kSpecExample);
     REQUIRE(result.has_value());
     const Manifest& m = result.value();
-    CHECK(m.onf_version == Version{0, 3, 0});
+    CHECK(m.onf_version == Version{0, 4, 0});
     CHECK(m.title == "Lecture Notes");
     CHECK(m.created_at == UtcDateTime{2026, 6, 14, 10, 32, 0, 0});
     CHECK(m.modified_at == UtcDateTime{2026, 6, 14, 12, 15, 0, 0});
@@ -115,7 +115,7 @@ TEST_CASE("manifest: pages are sorted by order whatever their position in the ar
 
 TEST_CASE("manifest: a single page, an empty title and unknown keys") {
     const std::string text =
-        R"({"onf_version":"0.3.0","title":"","created_at":"2026-06-14T10:32:00.000Z","modified_at":"2026-06-14T10:32:00.000Z",)"
+        R"({"onf_version":"0.4.0","title":"","created_at":"2026-06-14T10:32:00.000Z","modified_at":"2026-06-14T10:32:00.000Z",)"
         R"("future":{"a":[1,2]},"pages":[{"id":"p00001","order":1,"extra":true}]})";
     const auto result = manifest_of(text);
     REQUIRE(result.has_value());
@@ -127,7 +127,7 @@ TEST_CASE("manifest: a version is parsed but not judged here") {
     const std::string text = manifest_with_pages(page("p00001", 1));
     for (const char* version : {"1.0.0", "0.1.4", "9.9.9"}) {
         CAPTURE(version);
-        const auto result = manifest_of(replace_first(text, "0.3.0", version));
+        const auto result = manifest_of(replace_first(text, "0.4.0", version));
         REQUIRE(result.has_value());
         CHECK(result.value().onf_version == *parse_version(version));
     }
@@ -157,17 +157,17 @@ TEST_CASE("manifest: the root must be an object") {
 
 TEST_CASE("manifest: every required field must be present") {
     const std::string valid = manifest_with_pages(page("p00001", 1));
-    CHECK(problem(replace_first(valid, "\"onf_version\":\"0.3.0\",", "")) == ErrorCode::ManifestInvalidField);
+    CHECK(problem(replace_first(valid, "\"onf_version\":\"0.4.0\",", "")) == ErrorCode::ManifestInvalidField);
     CHECK(problem(replace_first(valid, "\"title\":\"T\",", "")) == ErrorCode::ManifestInvalidField);
     CHECK(problem(replace_first(valid, "\"created_at\":\"2026-06-14T10:32:00.000Z\",", "")) == ErrorCode::ManifestInvalidField);
     CHECK(problem(replace_first(valid, "\"modified_at\":\"2026-06-14T12:15:00.000Z\",", "")) == ErrorCode::ManifestInvalidField);
-    CHECK(problem(R"({"onf_version":"0.3.0","title":"T","created_at":"2026-06-14T10:32:00.000Z","modified_at":"2026-06-14T10:32:00.000Z"})") ==
+    CHECK(problem(R"({"onf_version":"0.4.0","title":"T","created_at":"2026-06-14T10:32:00.000Z","modified_at":"2026-06-14T10:32:00.000Z"})") ==
           ErrorCode::ManifestInvalidField);
 }
 
 TEST_CASE("manifest: fields of the wrong type") {
     const std::string valid = manifest_with_pages(page("p00001", 1));
-    CHECK(problem(replace_first(valid, "\"onf_version\":\"0.3.0\"", "\"onf_version\":2")) == ErrorCode::ManifestInvalidField);
+    CHECK(problem(replace_first(valid, "\"onf_version\":\"0.4.0\"", "\"onf_version\":2")) == ErrorCode::ManifestInvalidField);
     CHECK(problem(replace_first(valid, "\"title\":\"T\"", "\"title\":null")) == ErrorCode::ManifestInvalidField);
     CHECK(problem(replace_first(valid, "\"title\":\"T\"", "\"title\":5")) == ErrorCode::ManifestInvalidField);
     CHECK(problem(replace_first(valid, "\"created_at\":\"2026-06-14T10:32:00.000Z\"", "\"created_at\":1781433690000")) ==
@@ -180,9 +180,9 @@ TEST_CASE("manifest: fields of the wrong type") {
 
 TEST_CASE("manifest: malformed version and timestamps") {
     const std::string valid = manifest_with_pages(page("p00001", 1));
-    for (const char* version : {"0.2", "0.3.0.1", "01.2.0", "0.3.0-draft", "", "v0.3.0", "0.3.0 "}) {
+    for (const char* version : {"0.2", "0.4.0.1", "01.2.0", "0.4.0-draft", "", "v0.4.0", "0.4.0 "}) {
         CAPTURE(version);
-        CHECK(problem(replace_first(valid, "\"0.3.0\"", std::string("\"") + version + "\"")) == ErrorCode::ManifestInvalidField);
+        CHECK(problem(replace_first(valid, "\"0.4.0\"", std::string("\"") + version + "\"")) == ErrorCode::ManifestInvalidField);
     }
     for (const char* date : {"2026-06-14T10:32:00Z", "2026-06-14T10:32:00.000", "2026-02-30T10:32:00.000Z",
                              "2026-06-14T24:00:00.000Z", "2026-06-14T10:32:60.000Z", "2026-06-14 10:32:00.000Z", ""}) {
@@ -315,7 +315,7 @@ TEST_CASE("manifest: JSON errors in manifest.json reject the file with the JSON 
         {"{", ErrorCode::JsonSyntax},
         {"", ErrorCode::JsonSyntax},
         {"\xEF\xBB\xBF{}", ErrorCode::JsonBom},
-        {R"({"onf_version":"0.3.0","onf_version":"0.3.0"})", ErrorCode::JsonDuplicateKey},
+        {R"({"onf_version":"0.4.0","onf_version":"0.4.0"})", ErrorCode::JsonDuplicateKey},
         {R"({"title":"a)" + std::string("\xC3") + R"("})", ErrorCode::JsonInvalidUtf8},
         {R"({"pages":[1.5]})", ErrorCode::JsonNonIntegerNumber},
         {std::string(33, '[') + std::string(33, ']'), ErrorCode::JsonNestingTooDeep},

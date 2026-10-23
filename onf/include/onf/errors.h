@@ -51,6 +51,7 @@ namespace onf {
     X(LayerInvalid,             311, "layer_invalid",              "5.6")              \
     X(SpansInvalid,             312, "spans_invalid",              "8.3.1")            \
     X(DuplicateObjectId,        313, "duplicate_object_id",        "8.3")              \
+    X(CropInvalid,              314, "crop_invalid",               "9.3.2")            \
     /* 4xx: strokes.bin */                                                             \
     X(StrokesTooShort,          401, "strokes_too_short",          "7.2")              \
     X(StrokesBadMagic,          402, "strokes_bad_magic",          "7.2")              \

@@ -12,7 +12,7 @@ using namespace onf::test;
 
 namespace {
 
-// Chunk vectors V1 to V6 of spec Appendix C, extracted from the specification (tests/vectors/ink_chunks.tsv).
+// Chunk vectors V1 to V7 of spec Appendix C, extracted from the specification (tests/vectors/ink_chunks.tsv).
 Bytes vector_chunk(const std::string& name) {
     for (const Row& row : load_vectors("ink_chunks.tsv")) {
         if (row.at(0) == name) return parse_hex_bytes(row.at(2));
@@ -133,12 +133,30 @@ TEST_CASE("vectors: V6 triangle") {
     CHECK(t.y3 == 7500);
 }
 
-TEST_CASE("vectors: all six in one file keep the order") {
-    const auto ink = parse_vectors({"V1", "V2", "V3", "V4", "V5", "V6"});
-    REQUIRE(ink.size() == 6);
-    CHECK(std::holds_alternative<Stroke>(ink[0]));
-    CHECK(std::holds_alternative<Stroke>(ink[1]));
-    for (std::size_t i = 2; i < 6; ++i) CHECK(std::holds_alternative<Shape>(ink[i]));
+TEST_CASE("vectors: V7 fountain pen stroke without taper at both ends") {
+    const auto ink = parse_vectors({"V7"});
+    REQUIRE(ink.size() == 1);
+    const Stroke& s = std::get<Stroke>(ink[0]);
+    CHECK(s.stroke_id == 7);
+    CHECK(s.layer == 1);
+    CHECK(s.tool == ToolType::Fountain);
+    CHECK(s.base_width == 100);
+    CHECK(s.flags.raw() == 0x006C);
+    CHECK(s.flags.no_pressure());
+    CHECK(s.flags.no_timestamp());
+    CHECK(s.flags.no_taper_start());
+    CHECK(s.flags.no_taper_end());
+    CHECK(s.samples.x == std::vector<Coord>{1000, 1010});
+    CHECK(s.samples.y == std::vector<Coord>{2000, 2005});
+    CHECK(s.samples.pressure == std::vector<std::uint8_t>{255, 255});
+    CHECK(s.samples.timestamp.empty());
+}
+
+TEST_CASE("vectors: all seven in one file keep the order") {
+    const auto ink = parse_vectors({"V1", "V2", "V7", "V3", "V4", "V5", "V6"});
+    REQUIRE(ink.size() == 7);
+    for (std::size_t i = 0; i < 3; ++i) CHECK(std::holds_alternative<Stroke>(ink[i]));
+    for (std::size_t i = 3; i < 7; ++i) CHECK(std::holds_alternative<Shape>(ink[i]));
 }
 
 TEST_CASE("vectors: the size effect of NO_TIMESTAMP (spec C.3)") {
