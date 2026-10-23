@@ -29,4 +29,16 @@ std::int64_t zigzag_decode(std::uint64_t value) noexcept {
     return static_cast<std::int64_t>((value >> 1) ^ (0 - (value & 1)));
 }
 
+void append_varint(std::vector<std::uint8_t>& out, std::uint64_t value) {
+    while (value > 0x7F) {
+        out.push_back(static_cast<std::uint8_t>((value & 0x7F) | 0x80));
+        value >>= 7;
+    }
+    out.push_back(static_cast<std::uint8_t>(value));
+}
+
+std::uint64_t zigzag_to_unsigned(std::int64_t value) noexcept {
+    return (static_cast<std::uint64_t>(value) << 1) ^ static_cast<std::uint64_t>(value >> 63);
+}
+
 }  // namespace onf

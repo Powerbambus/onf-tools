@@ -11,10 +11,6 @@
 
 namespace onf::test {
 
-inline void append_u64(Bytes& out, std::uint64_t v) {
-    for (unsigned i = 0; i < 8; ++i) out.push_back(static_cast<std::uint8_t>(v >> (8 * i)));
-}
-
 inline Bytes deflate_raw(const Bytes& data, int level = 9) {
     z_stream stream{};
     deflateInit2(&stream, level, Z_DEFLATED, -15, 8, Z_DEFAULT_STRATEGY);

@@ -64,7 +64,7 @@ Result<Version, FileError> parse_manifest_version(const JsonValue& root) {
     auto text = required_string(root, "onf_version");
     if (!text) return unexpected(std::move(text).error());
     const auto version = parse_version(*text.value());
-    if (!version) return fail(ErrorCode::ManifestInvalidField, "field \"onf_version\" is not a version like 0.2.0");
+    if (!version) return fail(ErrorCode::ManifestInvalidField, "field \"onf_version\" is not a version like 0.3.0");
     return *version;
 }
 
@@ -74,6 +74,12 @@ Result<Manifest, FileError> parse_manifest(const JsonValue& root) {
 
     Manifest manifest;
     manifest.onf_version = version.value();
+
+    if (const JsonValue* generator = root.find("generator")) {
+        const std::string* text = generator->get_string();
+        if (text == nullptr) return fail(ErrorCode::ManifestInvalidField, "field \"generator\" must be a string");
+        manifest.generator = *text;
+    }
 
     auto title = required_string(root, "title");
     if (!title) return unexpected(std::move(title).error());

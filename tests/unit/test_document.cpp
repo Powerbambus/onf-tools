@@ -81,7 +81,7 @@ ZipSpec onf_spec(const std::string& manifest, const std::vector<TestPage>& pages
 }
 
 ZipSpec three_pages() {
-    return onf_spec(manifest_json("0.2.0", {{"p00001", 1}, {"p00002", 2}, {"p00003", 3}}),
+    return onf_spec(manifest_json("0.3.0", {{"p00001", 1}, {"p00002", 2}, {"p00003", 3}}),
                     {{"p00001", kMeta, strokes_file({one_stroke(1), one_stroke(2)})},
                      {"p00002", kMeta, strokes_file({one_stroke(1)})},
                      {"p00003", kMeta, strokes_file({})}});
@@ -129,7 +129,7 @@ TEST_CASE("document: a file written by an independent encoder") {
     CollectingSink sink;
     auto inspection = inspect(std::move(source).value(), &sink);
     REQUIRE(inspection.has_value());
-    CHECK(inspection.value().version() == Version{0, 2, 0});
+    CHECK(inspection.value().version() == Version{0, 3, 0});
     CHECK(inspection.value().status() == VersionStatus::Supported);
     CHECK(sink.items().empty());
 
@@ -137,6 +137,7 @@ TEST_CASE("document: a file written by an independent encoder") {
     REQUIRE(opened.has_value());
     const Document& document = opened.value();
     CHECK(document.manifest().title == "Minimal");
+    CHECK(document.manifest().generator == "make_valid_onf.py");
 
     REQUIRE(document.pages().size() == 2);
     CHECK(document.pages()[0].id == "p00002");
@@ -149,9 +150,9 @@ TEST_CASE("document: a file written by an independent encoder") {
     CHECK(first.value().meta.height == 29700);
     CHECK(first.value().meta.background.kind == BackgroundKind::Dotted);
     CHECK(first.value().meta.background.spacing == 500);
-    REQUIRE(first.value().strokes.size() == 1);
+    REQUIRE(first.value().ink.size() == 3);
 
-    const Stroke& stroke = first.value().strokes[0];
+    const Stroke& stroke = std::get<Stroke>(first.value().ink[0]);
     CHECK(stroke.stroke_id == 1);
     CHECK(stroke.created_at == 1781433600000ull);
     CHECK(stroke.color == Color{10, 20, 30, 255});
@@ -161,12 +162,43 @@ TEST_CASE("document: a file written by an independent encoder") {
     CHECK(stroke.samples.y == std::vector<Coord>{5000, 5003, 5007});
     CHECK(stroke.samples.pressure == std::vector<std::uint8_t>{200, 202, 200});
     CHECK(stroke.samples.timestamp == std::vector<Timestamp>{0, 8, 16});
+    CHECK(stroke.layer == 2);
+
+    // Vector V1 of spec Appendix C: no timestamps and no created_at.
+    const Stroke& no_time = std::get<Stroke>(first.value().ink[1]);
+    CHECK(no_time.stroke_id == 2);
+    CHECK_FALSE(no_time.created_at.has_value());
+    CHECK(no_time.flags.no_timestamp());
+    CHECK(no_time.samples.timestamp.empty());
+    CHECK(no_time.samples.x == std::vector<Coord>{10000, 10004});
+    CHECK(no_time.samples.pressure == std::vector<std::uint8_t>{255, 255});
+
+    // Vector V3: the ellipse follows the strokes in file order.
+    const Shape& shape = std::get<Shape>(first.value().ink[2]);
+    CHECK(shape.stroke_id == 3);
+    CHECK(shape.layer == 2);
+    const Ellipse& ellipse = std::get<Ellipse>(shape.geometry);
+    CHECK(ellipse.cx == 10500);
+    CHECK(ellipse.ry == 1500);
+    CHECK(ellipse.rotation == 4500);
+
+    REQUIRE(first.value().meta.text_objects.size() == 1);
+    const TextObject& text = first.value().meta.text_objects[0];
+    CHECK(text.layer == 3);
+    CHECK(text.created_at == 1781433600000ull);
+    REQUIRE(text.spans.size() == 2);
+    CHECK(text.spans[0].bold == true);
+    CHECK(text.spans[1].color == Color{255, 0, 0, 255});
+
+    REQUIRE(first.value().meta.assets.size() == 1);
+    CHECK(first.value().meta.assets[0].extension == "pdf");
+    CHECK(first.value().meta.assets[0].pdf_page == 3);
 
     const auto second = document.page("p00002", &sink);
     REQUIRE(second.has_value());
     CHECK(second.value().meta.width == 14800);
     CHECK(second.value().meta.background.kind == BackgroundKind::Ruled);
-    CHECK(second.value().strokes.empty());
+    CHECK(second.value().ink.empty());
     CHECK(sink.items().empty());
 
     const auto thumbnail = document.thumbnail_bytes();
@@ -180,17 +212,17 @@ TEST_CASE("document: inspect and open with a supported version") {
     auto inspection = inspect_spec(three_pages(), &sink);
     REQUIRE(inspection.has_value());
     CHECK(inspection.value().status() == VersionStatus::Supported);
-    CHECK(inspection.value().version() == Version{0, 2, 0});
+    CHECK(inspection.value().version() == Version{0, 3, 0});
     CHECK(sink.items().empty());
 
     auto document = std::move(inspection).value().open();
     REQUIRE(document.has_value());
     CHECK(document.value().pages().size() == 3);
-    CHECK(document.value().manifest().onf_version == Version{0, 2, 0});
+    CHECK(document.value().manifest().onf_version == Version{0, 3, 0});
 }
 
 TEST_CASE("document: pages come back in display order with their content") {
-    const Document document = open_ok(onf_spec(manifest_json("0.2.0", {{"p00001", 2}, {"p00002", 1}}),
+    const Document document = open_ok(onf_spec(manifest_json("0.3.0", {{"p00001", 2}, {"p00002", 1}}),
                                                {{"p00001", kMeta, strokes_file({one_stroke(7, 11)})},
                                                 {"p00002", kMeta, strokes_file({one_stroke(8, 22), one_stroke(9, 33)})}}));
     REQUIRE(document.pages().size() == 2);
@@ -198,13 +230,13 @@ TEST_CASE("document: pages come back in display order with their content") {
 
     const auto first = document.page(document.pages()[0].id);
     REQUIRE(first.has_value());
-    REQUIRE(first.value().strokes.size() == 2);
-    CHECK(first.value().strokes[0].stroke_id == 8);
-    CHECK(first.value().strokes[1].samples.x[0] == 33);
+    REQUIRE(first.value().ink.size() == 2);
+    CHECK(std::get<Stroke>(first.value().ink[0]).stroke_id == 8);
+    CHECK(std::get<Stroke>(first.value().ink[1]).samples.x[0] == 33);
 
     const auto second = document.page(document.pages()[1].id);
     REQUIRE(second.has_value());
-    CHECK(second.value().strokes[0].stroke_id == 7);
+    CHECK(std::get<Stroke>(second.value().ink[0]).stroke_id == 7);
 }
 
 TEST_CASE("document: a page can be read more than once") {
@@ -213,8 +245,8 @@ TEST_CASE("document: a page can be read more than once") {
     const auto b = document.page("p00001");
     REQUIRE(a.has_value());
     REQUIRE(b.has_value());
-    CHECK(a.value().strokes.size() == b.value().strokes.size());
-    CHECK(a.value().strokes[0].samples.x == b.value().strokes[0].samples.x);
+    CHECK(a.value().ink.size() == b.value().ink.size());
+    CHECK(std::get<Stroke>(a.value().ink[0]).samples.x == std::get<Stroke>(b.value().ink[0]).samples.x);
 }
 
 TEST_CASE("document: the document can be moved") {
@@ -224,7 +256,7 @@ TEST_CASE("document: the document can be moved") {
 }
 
 TEST_CASE("version: other 0.x versions need the decision of the host") {
-    for (const char* version : {"0.1.4", "0.3.0", "0.0.1"}) {
+    for (const char* version : {"0.1.4", "0.2.0", "0.0.1"}) {
         CAPTURE(version);
         const ZipSpec spec = onf_spec(manifest_json(version, {{"p00001", 1}}), {{"p00001", kMeta, strokes_file({})}});
 
@@ -300,9 +332,9 @@ TEST_CASE("inspect: container and manifest errors") {
 }
 
 TEST_CASE("open: manifest errors reject the whole file") {
-    CHECK(open_error(onf_spec(manifest_json("0.2.0", {}), {})) == ErrorCode::ManifestPagesInvalid);
-    CHECK(open_error(onf_spec(manifest_json("0.2.0", {{"p00001", 1}, {"p00001", 2}}), {})) == ErrorCode::ManifestPagesInvalid);
-    CHECK(open_error(onf_spec(manifest_json("0.2.0", {{"p00001", 1}, {"p00002", 2}}),
+    CHECK(open_error(onf_spec(manifest_json("0.3.0", {}), {})) == ErrorCode::ManifestPagesInvalid);
+    CHECK(open_error(onf_spec(manifest_json("0.3.0", {{"p00001", 1}, {"p00001", 2}}), {})) == ErrorCode::ManifestPagesInvalid);
+    CHECK(open_error(onf_spec(manifest_json("0.3.0", {{"p00001", 1}, {"p00002", 2}}),
                               {{"p00001", kMeta, strokes_file({})}})) == ErrorCode::PageDirectoryMissing);
 }
 
@@ -351,7 +383,7 @@ TEST_CASE("page: errors in the files of a page") {
 
     for (const Case& c : cases) {
         CAPTURE(c.what);
-        const Document document = open_ok(onf_spec(manifest_json("0.2.0", {{"p00001", 1}}), {c.page}));
+        const Document document = open_ok(onf_spec(manifest_json("0.3.0", {{"p00001", 1}}), {c.page}));
         CollectingSink sink;
         const auto result = document.page("p00001", &sink);
         REQUIRE_FALSE(result.has_value());
@@ -363,7 +395,7 @@ TEST_CASE("page: errors in the files of a page") {
 
 TEST_CASE("page: missing files of a page are page errors, not file errors") {
     ZipSpec no_strokes;
-    no_strokes.entries.push_back(entry("manifest.json", manifest_json("0.2.0", {{"p00001", 1}, {"p00002", 2}})));
+    no_strokes.entries.push_back(entry("manifest.json", manifest_json("0.3.0", {{"p00001", 1}, {"p00002", 2}})));
     no_strokes.entries.push_back(entry("pages/p00001/meta.json", kMeta));
     no_strokes.entries.push_back(entry("pages/p00002/meta.json", kMeta));
     no_strokes.entries.push_back(entry("pages/p00002/strokes.bin", strokes_file({})));
@@ -375,14 +407,14 @@ TEST_CASE("page: missing files of a page are page errors, not file errors") {
     CHECK(document.page("p00002").has_value());
 
     ZipSpec no_meta;
-    no_meta.entries.push_back(entry("manifest.json", manifest_json("0.2.0", {{"p00001", 1}})));
+    no_meta.entries.push_back(entry("manifest.json", manifest_json("0.3.0", {{"p00001", 1}})));
     no_meta.entries.push_back(entry("pages/p00001/strokes.bin", strokes_file({})));
     CHECK(open_ok(no_meta).page("p00001").error().code == ErrorCode::PageFileMissing);
 }
 
-TEST_CASE("page: a strokes version above 1 is reported and the page is unreadable") {
-    const Document document = open_ok(onf_spec(manifest_json("0.2.0", {{"p00001", 1}}),
-                                               {{"p00001", kMeta, concat({file_header(2), chunk(2)})}}));
+TEST_CASE("page: a strokes version other than 2 is reported and the page is unreadable") {
+    const Document document = open_ok(onf_spec(manifest_json("0.3.0", {{"p00001", 1}}),
+                                               {{"p00001", kMeta, concat({file_header(1), chunk(2)})}}));
     CollectingSink sink;
     const auto result = document.page("p00001", &sink);
     REQUIRE_FALSE(result.has_value());

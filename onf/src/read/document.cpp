@@ -5,6 +5,7 @@
 #include <utility>
 
 #include "onf/limits.h"
+#include "onf/primitives/sha256.h"
 #include "onf/read/manifest.h"
 #include "onf/read/page_meta.h"
 #include "onf/read/stroke_parser.h"
@@ -33,10 +34,10 @@ Result<Page, PageError> read_page(const ZipArchive& archive, const Manifest& man
     auto bytes = archive.read(*index);
     if (!bytes) return unexpected(page_error(id, bytes.error().code, bytes.error().message));
 
-    auto strokes = parse_strokes(bytes.value(), id, sink);
-    if (!strokes) return unexpected(std::move(strokes).error());
+    auto ink = parse_ink(bytes.value(), id, sink);
+    if (!ink) return unexpected(std::move(ink).error());
 
-    return Page{std::string(id), std::move(meta).value(), std::move(strokes).value()};
+    return Page{std::string(id), std::move(meta).value(), std::move(ink).value()};
 }
 
 }  // namespace
@@ -47,6 +48,46 @@ Result<Page, PageError> Document::page(std::string_view id, DiagnosticsSink* sin
         sink->report({DiagnosticKind::PageError, std::string(id), result.error().message});
     }
     return result;
+}
+
+Result<AssetContent, FileError> Document::asset(const AssetRef& placement, std::string_view page_id, DiagnosticsSink* sink,
+                                                AssetOptions options) const {
+    const auto report = [&](DiagnosticKind kind, const std::string& detail) {
+        if (sink != nullptr) sink->report({kind, std::string(page_id), "asset " + placement.hash + ": " + detail});
+    };
+    AssetContent content;
+
+    // The extension is part of the path, so it is only used after it is known to be one of spec 9.2.2 (spec 4.6.1).
+    if (!is_supported_asset_extension(placement.extension)) {
+        content.check = {AssetStatus::UnsupportedFormat, "the extension \"" + placement.extension + "\" is not supported", std::nullopt, std::nullopt};
+        report(DiagnosticKind::UnsupportedAssetFormat, content.check.detail);
+        return content;
+    }
+
+    const std::string name = "assets/" + placement.hash + "." + placement.extension;
+    const auto index = archive_.find(name);
+    if (!index) {
+        content.check = {AssetStatus::Missing, name + " is not in the archive", std::nullopt, std::nullopt};
+        report(DiagnosticKind::MissingAsset, content.check.detail);
+        return content;
+    }
+
+    auto bytes = archive_.read(*index);
+    if (!bytes) return unexpected(std::move(bytes).error());
+
+    if (options.verify_hash && sha256_hex(bytes.value()) != placement.hash) {
+        content.check = {AssetStatus::Corrupt, "the SHA-256 of the file does not match its name", std::nullopt, std::nullopt};
+        report(DiagnosticKind::CorruptAsset, content.check.detail);
+        return content;
+    }
+
+    content.check = check_asset_content(placement.extension, bytes.value());
+    if (content.check.status != AssetStatus::Ok) {
+        report(DiagnosticKind::CorruptAsset, content.check.detail);
+        return content;
+    }
+    content.bytes = std::move(bytes).value();
+    return content;
 }
 
 Result<std::optional<std::vector<std::uint8_t>>, FileError> Document::thumbnail_bytes() const {

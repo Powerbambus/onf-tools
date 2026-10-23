@@ -3,6 +3,7 @@
 #include <cstddef>
 #include <cstdint>
 #include <span>
+#include <string_view>
 
 namespace onf {
 
@@ -11,5 +12,8 @@ namespace onf {
 std::size_t utf8_sequence_length(std::span<const std::uint8_t> bytes) noexcept;
 
 bool is_valid_utf8(std::span<const std::uint8_t> bytes) noexcept;
+
+// Number of code points of a string that is valid UTF-8 (spec 12.6 counts length in code points).
+std::size_t count_code_points(std::string_view text) noexcept;
 
 }  // namespace onf

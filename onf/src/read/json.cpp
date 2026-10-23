@@ -13,7 +13,7 @@ const JsonValue* JsonValue::find(std::string_view key) const noexcept {
     const Object* object = get_object();
     if (object == nullptr) return nullptr;
     for (const auto& member : *object) {
-        if (member.first == key) return &member.second;
+        if (member.key == key) return &member.value;
     }
     return nullptr;
 }

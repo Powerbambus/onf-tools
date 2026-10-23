@@ -7,11 +7,11 @@
 
 namespace onf {
 
-// This reader implements ONF 0.2.x.
-inline constexpr Version kImplementedVersion{0, 2, 0};
+// This reader implements ONF 0.3.x.
+inline constexpr Version kImplementedVersion{0, 3, 0};
 
 enum class VersionStatus {
-    Supported,              // 0.2.x
+    Supported,              // 0.3.x
     UnsupportedPreRelease,  // any other 0.x.y: pre-release versions may break at every release (spec 10.1)
     NewerMajor,             // MAJOR 1 or higher (spec 10.3)
 };

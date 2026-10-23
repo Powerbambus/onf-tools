@@ -41,4 +41,12 @@ bool is_valid_utf8(std::span<const std::uint8_t> bytes) noexcept {
     return true;
 }
 
+std::size_t count_code_points(std::string_view text) noexcept {
+    std::size_t count = 0;
+    for (const char c : text) {
+        if ((static_cast<unsigned char>(c) & 0xC0) != 0x80) ++count;
+    }
+    return count;
+}
+
 }  // namespace onf

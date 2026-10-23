@@ -4,14 +4,18 @@ add_executable(onf_tests
     unit/test_bytecursor.cpp
     unit/test_result.cpp
     unit/test_document.cpp
+    unit/test_assets.cpp
     unit/test_errors.cpp
+    unit/test_ink_vectors.cpp
     unit/test_diagnostics.cpp
     unit/test_json.cpp
     unit/test_limits.cpp
+    unit/test_malformed_fixtures.cpp
     unit/test_manifest.cpp
     unit/test_page_meta.cpp
     unit/test_paths.cpp
     unit/test_real_archives.cpp
+    unit/test_sha256.cpp
     unit/test_stroke_parser.cpp
     unit/test_strokes_file.cpp
     unit/test_types.cpp
@@ -20,6 +24,7 @@ add_executable(onf_tests
     unit/test_zip_archive.cpp
     unit/test_varint.cpp
     unit/test_version_policy.cpp
+    unit/test_writer.cpp
 )
 target_link_libraries(onf_tests PRIVATE onf::onf ZLIB::ZLIB)
 target_include_directories(onf_tests PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})

@@ -48,6 +48,9 @@ namespace onf {
     X(VersionRejected,          308, "version_rejected",           "10.3")             \
     X(ManifestTooLarge,         309, "manifest_too_large",         "12.6")             \
     X(ThumbnailTooLarge,        310, "thumbnail_too_large",        "4.3")              \
+    X(LayerInvalid,             311, "layer_invalid",              "5.6")              \
+    X(SpansInvalid,             312, "spans_invalid",              "8.3.1")            \
+    X(DuplicateObjectId,        313, "duplicate_object_id",        "8.3")              \
     /* 4xx: strokes.bin */                                                             \
     X(StrokesTooShort,          401, "strokes_too_short",          "7.2")              \
     X(StrokesBadMagic,          402, "strokes_bad_magic",          "7.2")              \
@@ -61,11 +64,19 @@ namespace onf {
     X(StrokeSamplesTruncated,   410, "stroke_samples_truncated",   "7.3.2")            \
     X(StrokeIdDuplicate,        411, "stroke_id_duplicate",        "7.3.2")            \
     X(SampleValueOutOfRange,    412, "sample_value_out_of_range",  "7.5.2")            \
+    X(InkLayerZero,             413, "ink_layer_zero",             "7.3.2")            \
+    X(ShapeHeaderTooShort,      414, "shape_header_too_short",     "7.3.2")            \
+    X(ShapeParametersTruncated, 415, "shape_parameters_truncated", "7.3.2")            \
+    X(ShapeToolTypeInvalid,     416, "shape_tool_type_invalid",    "7.9.2")            \
+    X(ShapeParameterInvalid,    417, "shape_parameter_invalid",    "7.9.4")            \
     /* 5xx: varint */                                                                  \
     X(VarintTruncated,          501, "varint_truncated",           "2.3.2")            \
     X(VarintTooLong,            502, "varint_too_long",            "2.3.2")            \
     X(VarintOutOfRange,         503, "varint_out_of_range",        "2.3.2")            \
-    X(VarintNotCanonical,       504, "varint_not_canonical",       "2.3.2")
+    X(VarintNotCanonical,       504, "varint_not_canonical",       "2.3.2")                \
+    /* 6xx: writing */                                                                 \
+    X(WriteInvalidDocument,     601, "write_invalid_document",     "11.5")             \
+    X(WriteFailed,              602, "write_failed",               "4.1")
 
 enum class ErrorCode : std::uint16_t {
 #define ONF_X(name, value, text, ref) name = value,

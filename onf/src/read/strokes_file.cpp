@@ -36,10 +36,10 @@ Result<StrokeFile, PageError> parse_strokes_file(std::span<const std::uint8_t> b
     if (version == 0) {
         return fail(page_id, ErrorCode::StrokesVersionZero, "strokes.bin version is 0", 4);
     }
-    if (version > kStrokesFormatVersion) {
+    if (version != kStrokesFormatVersion) {
         if (sink != nullptr) {
             sink->report({DiagnosticKind::StrokesVersionMismatch, std::string(page_id),
-                          "strokes.bin version " + std::to_string(version) + " is higher than the supported " +
+                          "strokes.bin version " + std::to_string(version) + " is not the supported " +
                               std::to_string(kStrokesFormatVersion)});
         }
         return fail(page_id, ErrorCode::StrokesVersionUnsupported, "strokes.bin version is not supported", 4);
@@ -64,13 +64,21 @@ Result<StrokeFile, PageError> parse_strokes_file(std::span<const std::uint8_t> b
         const auto body = cursor.read_bytes(length).value();
 
         if (type == kChunkTypeEnd) break;
-        if (type != kChunkTypeStroke) continue;
 
-        if (body.size() < limits::kStrokeHeaderSize) {
-            return fail(page_id, ErrorCode::StrokeHeaderTooShort, "STROKE chunk is shorter than the 26-byte stroke header",
-                        frame_offset);
+        if (type == kChunkTypeStroke) {
+            if (body.size() < limits::kStrokeHeaderSize) {
+                return fail(page_id, ErrorCode::StrokeHeaderTooShort,
+                            "STROKE chunk is shorter than the 20-byte stroke header", frame_offset);
+            }
+        } else if (type == kChunkTypeShape) {
+            if (body.size() < limits::kShapeHeaderSize) {
+                return fail(page_id, ErrorCode::ShapeHeaderTooShort,
+                            "SHAPE chunk is shorter than the 16-byte shape header", frame_offset);
+            }
+        } else {
+            continue;  // unknown chunk types are skipped (spec 10.5.2)
         }
-        file.stroke_chunks.push_back({body, body_offset});
+        file.ink_chunks.push_back({type, body, body_offset});
     }
     return file;
 }

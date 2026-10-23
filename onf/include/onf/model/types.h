@@ -42,6 +42,8 @@ public:
     constexpr bool has_tilt() const noexcept { return (raw_ & kHasTilt) != 0; }
     constexpr bool has_azimuth() const noexcept { return (raw_ & kHasAzimuth) != 0; }
     constexpr bool no_pressure() const noexcept { return (raw_ & kNoPressure) != 0; }
+    constexpr bool no_timestamp() const noexcept { return (raw_ & kNoTimestamp) != 0; }
+    constexpr bool has_created_at() const noexcept { return (raw_ & kHasCreatedAt) != 0; }
 
     friend constexpr bool operator==(StrokeFlags, StrokeFlags) noexcept = default;
 
@@ -49,6 +51,8 @@ private:
     static constexpr std::uint16_t kHasTilt = 1u << 0;
     static constexpr std::uint16_t kHasAzimuth = 1u << 1;
     static constexpr std::uint16_t kNoPressure = 1u << 2;
+    static constexpr std::uint16_t kNoTimestamp = 1u << 3;
+    static constexpr std::uint16_t kHasCreatedAt = 1u << 4;
 
     std::uint16_t raw_ = 0;
 };

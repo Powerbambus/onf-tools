@@ -60,7 +60,7 @@ bool is_valid_asset_hash(std::string_view hash) {
 }
 
 bool is_supported_asset_extension(std::string_view extension) {
-    return extension == "webp" || extension == "png" || extension == "jpg";
+    return extension == "webp" || extension == "png" || extension == "jpg" || extension == "pdf";
 }
 
 }  // namespace onf

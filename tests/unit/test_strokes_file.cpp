@@ -29,14 +29,14 @@ PageError parse_error(const Bytes& bytes) {
     return result.error();
 }
 
-Bytes stroke_chunk(std::uint8_t marker = 0xEE) { return chunk(kStroke, filler(26, marker)); }
+Bytes stroke_chunk(std::uint8_t marker = 0xEE) { return chunk(kStroke, filler(20, marker)); }
 
 }  // namespace
 
 TEST_CASE("a file with only the header is valid and has no strokes") {
     const auto result = parse(file_header());
     REQUIRE(result.has_value());
-    CHECK(result.value().stroke_chunks.empty());
+    CHECK(result.value().ink_chunks.empty());
 }
 
 TEST_CASE("an END chunk is optional") {
@@ -44,8 +44,8 @@ TEST_CASE("an END chunk is optional") {
     const auto with_end = parse(concat({file_header(), stroke_chunk(), chunk(kEnd)}));
     REQUIRE(without_end.has_value());
     REQUIRE(with_end.has_value());
-    CHECK(without_end.value().stroke_chunks.size() == 1);
-    CHECK(with_end.value().stroke_chunks.size() == 1);
+    CHECK(without_end.value().ink_chunks.size() == 1);
+    CHECK(with_end.value().ink_chunks.size() == 1);
 }
 
 TEST_CASE("files shorter than the header are rejected") {
@@ -65,7 +65,7 @@ TEST_CASE("wrong magic bytes are rejected before anything else") {
         CAPTURE(i);
         std::array<std::uint8_t, 4> magic = {0x4F, 0x4E, 0x46, 0x53};
         magic[i] ^= 0x01;
-        CHECK(parse_error(file_header(1, magic)).code == ErrorCode::StrokesBadMagic);
+        CHECK(parse_error(file_header(2, magic)).code == ErrorCode::StrokesBadMagic);
     }
     CHECK(parse_error(file_header(0, {0, 0, 0, 0})).code == ErrorCode::StrokesBadMagic);
 }
@@ -76,8 +76,8 @@ TEST_CASE("version 0 is malformed") {
     CHECK(error.offset == 4);
 }
 
-TEST_CASE("a higher version is rejected and reported to the sink") {
-    for (std::uint16_t version : std::vector<std::uint16_t>{2, 3, 65535}) {
+TEST_CASE("every version other than 2 is rejected and reported to the sink") {
+    for (std::uint16_t version : std::vector<std::uint16_t>{1, 3, 65535}) {
         CAPTURE(version);
         CollectingSink sink;
         const auto result = parse(file_header(version), &sink);
@@ -89,14 +89,14 @@ TEST_CASE("a higher version is rejected and reported to the sink") {
     }
 }
 
-TEST_CASE("version 1 does not report anything") {
+TEST_CASE("version 2 does not report anything") {
     CollectingSink sink;
-    CHECK(parse(file_header(1), &sink).has_value());
+    CHECK(parse(file_header(2), &sink).has_value());
     CHECK(sink.items().empty());
 }
 
 TEST_CASE("non-zero reserved bytes are ignored") {
-    CHECK(parse(file_header(1, {0x4F, 0x4E, 0x46, 0x53}, {0xFF, 0xFF})).has_value());
+    CHECK(parse(file_header(2, {0x4F, 0x4E, 0x46, 0x53}, {0xFF, 0xFF})).has_value());
 }
 
 TEST_CASE("1 to 5 bytes after the last chunk are an incomplete chunk header") {
@@ -114,7 +114,7 @@ TEST_CASE("1 to 5 bytes after the last chunk are an incomplete chunk header") {
 }
 
 TEST_CASE("a chunk length beyond the data is rejected") {
-    const Bytes body = filler(26);
+    const Bytes body = filler(20);
 
     const Bytes one_too_long = concat({file_header(), chunk_with_length(kStroke, 27, body)});
     CHECK(parse_error(one_too_long).code == ErrorCode::ChunkLengthExceedsData);
@@ -125,13 +125,13 @@ TEST_CASE("a chunk length beyond the data is rejected") {
     CHECK(error.code == ErrorCode::ChunkLengthExceedsData);
     CHECK(error.offset == 8);
 
-    CHECK(parse(concat({file_header(), chunk_with_length(kStroke, 26, body)})).has_value());
+    CHECK(parse(concat({file_header(), chunk_with_length(kStroke, 20, body)})).has_value());
 }
 
-TEST_CASE("a STROKE body must hold the 26-byte stroke header") {
-    CHECK(parse_error(concat({file_header(), chunk(kStroke, filler(25))})).code == ErrorCode::StrokeHeaderTooShort);
+TEST_CASE("a STROKE body must hold the 20-byte stroke header") {
+    CHECK(parse_error(concat({file_header(), chunk(kStroke, filler(19))})).code == ErrorCode::StrokeHeaderTooShort);
     CHECK(parse_error(concat({file_header(), chunk(kStroke)})).code == ErrorCode::StrokeHeaderTooShort);
-    CHECK(parse(concat({file_header(), chunk(kStroke, filler(26))})).has_value());
+    CHECK(parse(concat({file_header(), chunk(kStroke, filler(20))})).has_value());
     CHECK(parse(concat({file_header(), chunk(kStroke, filler(100))})).has_value());
 }
 
@@ -141,21 +141,41 @@ TEST_CASE("END stops reading and ignores its body and everything after it") {
                                chunk_with_length(kStroke, 9999, {}), garbage});
     const auto result = parse(file);
     REQUIRE(result.has_value());
-    REQUIRE(result.value().stroke_chunks.size() == 1);
-    CHECK(result.value().stroke_chunks[0].body[0] == 0x01);
+    REQUIRE(result.value().ink_chunks.size() == 1);
+    CHECK(result.value().ink_chunks[0].body[0] == 0x01);
 }
 
 TEST_CASE("unknown chunk types are skipped, including type 0") {
-    for (std::uint16_t type : {std::uint16_t{0}, std::uint16_t{3}, std::uint16_t{0x1234}, std::uint16_t{0xFFFF}}) {
+    for (std::uint16_t type : {std::uint16_t{0}, std::uint16_t{4}, std::uint16_t{0x1234}, std::uint16_t{0xFFFF}}) {
         CAPTURE(type);
         const Bytes file = concat({file_header(), chunk(type, filler(40)), stroke_chunk(0x01), chunk(type, filler(7)),
                                    stroke_chunk(0x02), chunk(type)});
         const auto result = parse(file);
         REQUIRE(result.has_value());
-        REQUIRE(result.value().stroke_chunks.size() == 2);
-        CHECK(result.value().stroke_chunks[0].body[0] == 0x01);
-        CHECK(result.value().stroke_chunks[1].body[0] == 0x02);
+        REQUIRE(result.value().ink_chunks.size() == 2);
+        CHECK(result.value().ink_chunks[0].body[0] == 0x01);
+        CHECK(result.value().ink_chunks[1].body[0] == 0x02);
     }
+}
+
+TEST_CASE("SHAPE chunks are collected together with STROKE chunks in file order") {
+    constexpr std::uint16_t kShape = 0x0003;
+    const Bytes file = concat({file_header(), stroke_chunk(0x01), chunk(kShape, filler(30, 0x02)), stroke_chunk(0x03), chunk(kEnd)});
+    const auto result = parse(file);
+    REQUIRE(result.has_value());
+    const auto& chunks = result.value().ink_chunks;
+    REQUIRE(chunks.size() == 3);
+    CHECK(chunks[0].type == kStroke);
+    CHECK(chunks[1].type == kShape);
+    CHECK(chunks[1].body.size() == 30);
+    CHECK(chunks[2].type == kStroke);
+}
+
+TEST_CASE("a SHAPE body must hold the 16-byte shape header") {
+    constexpr std::uint16_t kShape = 0x0003;
+    CHECK(parse_error(concat({file_header(), chunk(kShape, filler(15))})).code == ErrorCode::ShapeHeaderTooShort);
+    CHECK(parse_error(concat({file_header(), chunk(kShape)})).code == ErrorCode::ShapeHeaderTooShort);
+    CHECK(parse(concat({file_header(), chunk(kShape, filler(16))})).has_value());
 }
 
 TEST_CASE("an unknown chunk with a bad length is still malformed") {
@@ -168,16 +188,16 @@ TEST_CASE("stroke chunks keep their order and point into the input") {
     const auto result = parse(file);
     REQUIRE(result.has_value());
 
-    const auto& chunks = result.value().stroke_chunks;
+    const auto& chunks = result.value().ink_chunks;
     REQUIRE(chunks.size() == 3);
     for (std::size_t i = 0; i < chunks.size(); ++i) {
         CAPTURE(i);
-        CHECK(chunks[i].body.size() == 26);
+        CHECK(chunks[i].body.size() == 20);
         CHECK(chunks[i].body.data() == file.data() + chunks[i].offset);
         CHECK(chunks[i].body[0] == 0x0A + i);
     }
     CHECK(chunks[0].offset == 8 + 6);
-    CHECK(chunks[1].offset == 8 + 6 + 26 + 6);
+    CHECK(chunks[1].offset == 8 + 6 + 20 + 6);
 }
 
 TEST_CASE("cutting a valid file at any length never crashes and only gives framing errors") {

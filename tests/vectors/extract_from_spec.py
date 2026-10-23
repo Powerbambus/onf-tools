@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Extract the varint and zigzag test vectors from Appendix A.3 of the ONF specification.
+"""Extract the test vectors from the ONF specification: varint and zigzag (Appendix A.3), STROKE and SHAPE chunks (Appendix C).
 
     extract_from_spec.py [--spec PATH]            write the .tsv files next to this script
     extract_from_spec.py [--spec PATH] --check    compare the .tsv files with the specification
@@ -57,6 +57,28 @@ def zigzag(n):
     return (n << 1) if n >= 0 else ((-n << 1) - 1)
 
 
+def chunk_vectors(lines):
+    """V1 to V6 of Appendix C: a bold heading "**Vn: ...**" followed by a fenced block with the whole chunk."""
+    rows = []
+    i = 0
+    while i < len(lines):
+        m = re.match(r"\*\*(V\d+): ", lines[i])
+        if m:
+            start = next(j for j in range(i, len(lines)) if lines[j].startswith("```"))
+            end = next(j for j in range(start + 1, len(lines)) if lines[j].startswith("```"))
+            data = bytes.fromhex("".join(lines[start + 1:end]).replace(" ", ""))
+            chunk_type = int.from_bytes(data[0:2], "little")
+            length = int.from_bytes(data[2:6], "little")
+            if length != len(data) - 6:
+                sys.exit(f"{m.group(1)}: chunk_length {length} does not match the body of {len(data) - 6} bytes")
+            rows.append(f"{m.group(1)}\t{chunk_type}\t{data.hex(' ')}")
+            i = end
+        i += 1
+    if not rows:
+        sys.exit("no chunk vectors found in Appendix C")
+    return rows
+
+
 def build(spec_text):
     lines = spec_text.splitlines()
 
@@ -86,6 +108,8 @@ def build(spec_text):
         "zigzag.tsv": "# signed\tzigzag\tbytes\n" + "\n".join(zigzag_rows) + "\n",
         "varint_plain.tsv": "# value\tbytes\n" + "\n".join(plain_rows) + "\n",
         "varint_malformed.tsv": "# bytes\tfield\terror\n" + "\n".join(malformed_rows) + "\n",
+        "ink_chunks.tsv": "# name\tchunk_type\tbytes (the whole chunk including the 6-byte frame)\n"
+                          + "\n".join(chunk_vectors(lines)) + "\n",
     }
 
 

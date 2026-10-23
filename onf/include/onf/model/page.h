@@ -5,6 +5,7 @@
 #include <string>
 #include <vector>
 
+#include "onf/model/content.h"
 #include "onf/model/stroke.h"
 #include "onf/model/types.h"
 
@@ -20,18 +21,19 @@ struct Background {
     std::optional<Coord> spacing;           // set for ruled, grid and dotted, always positive
 };
 
-// text_objects and assets are checked to be arrays but not read yet.
 struct PageMeta {
     Coord width = 0;   // always positive
     Coord height = 0;  // always positive
     Background background;
+    std::vector<TextObject> text_objects;  // in file order, ids are unique
+    std::vector<AssetRef> assets;          // in file order, ids are unique
 };
 
-// One fully read page: strokes in the order of the file.
+// One fully read page: strokes and shapes in the order of the file.
 struct Page {
     std::string id;
     PageMeta meta;
-    std::vector<Stroke> strokes;
+    std::vector<InkItem> ink;
 };
 
 }  // namespace onf

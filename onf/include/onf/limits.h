@@ -48,7 +48,30 @@ static_assert(kTimestampMaxValue == (1ull << 32) - 1);
 // 7.2, 7.3, 7.3.2
 inline constexpr std::uint64_t kStrokesFileHeaderSize = 8;
 inline constexpr std::uint64_t kChunkFrameSize = 6;
-inline constexpr std::uint64_t kStrokeHeaderSize = 26;
-inline constexpr std::uint64_t kMinSampleSize = 4;  // x, y, pressure, timestamp
+inline constexpr std::uint64_t kStrokeHeaderSize = 20;        // 7.4.1, without created_at
+inline constexpr std::uint64_t kCreatedAtSize = 8;            // 7.4.1, 7.9.2, only with HAS_CREATED_AT
+inline constexpr std::uint64_t kShapeHeaderSize = 16;         // 7.9.2, without created_at and shape_type
+inline constexpr std::uint64_t kShapeTypeSize = 2;            // 7.9.2
+inline constexpr std::uint64_t kMinSampleSize = 3;            // x, y, pressure
+inline constexpr std::uint64_t kTimestampMinSize = 1;         // the timestamp field, unless NO_TIMESTAMP is set
+
+// 7.9.4: size of the parameters of each shape type
+inline constexpr std::uint64_t kEllipseParameterSize = 18;
+inline constexpr std::uint64_t kRectangleParameterSize = 18;
+inline constexpr std::uint64_t kLineParameterSize = 16;
+inline constexpr std::uint64_t kTriangleParameterSize = 24;
+
+// 7.9.6
+inline constexpr std::uint32_t kMaxRotation = 35999;  // hundredths of a degree
+
+// 5.6
+inline constexpr std::uint32_t kMinLayer = 1;
+inline constexpr std::uint32_t kMaxLayer = 65535;
+
+// 8.3.1
+inline constexpr std::uint32_t kMaxSpans = 65535;
+
+// 9.3.2
+inline constexpr std::int64_t kMaxPdfPage = 2147483647;
 
 }  // namespace onf::limits

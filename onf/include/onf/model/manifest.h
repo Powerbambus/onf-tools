@@ -1,6 +1,7 @@
 #pragma once
 
 #include <cstdint>
+#include <optional>
 #include <string>
 #include <vector>
 
@@ -16,6 +17,7 @@ struct PageEntry {
 
 struct Manifest {
     Version onf_version;
+    std::optional<std::string> generator;  // informational only, spec 6.1.2
     std::string title;
     UtcDateTime created_at;
     UtcDateTime modified_at;

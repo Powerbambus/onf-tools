@@ -89,8 +89,8 @@ TEST_CASE("objects and arrays keep order and are searchable") {
     const auto* object = v.get_object();
     REQUIRE(object != nullptr);
     REQUIRE(object->size() == 4);
-    CHECK((*object)[0].first == "b");
-    CHECK((*object)[1].first == "a");
+    CHECK((*object)[0].key == "b");
+    CHECK((*object)[1].key == "a");
 
     CHECK(*v.find("a")->get_string() == "s");
     CHECK(v.find("missing") == nullptr);

@@ -17,7 +17,8 @@ namespace onf {
 class JsonValue {
 public:
     using Array = std::vector<JsonValue>;
-    using Object = std::vector<std::pair<std::string, JsonValue>>;  // in file order, keys are unique
+    struct Member;  // completed below; a vector of an incomplete type is allowed, a vector of pairs of it is not
+    using Object = std::vector<Member>;  // in file order, keys are unique
 
     std::variant<std::monostate, bool, std::int64_t, std::string, Array, Object> data;
 
@@ -30,6 +31,11 @@ public:
 
     // nullptr if this is not an object or the key is absent.
     const JsonValue* find(std::string_view key) const noexcept;
+};
+
+struct JsonValue::Member {
+    std::string key;
+    JsonValue value;
 };
 
 struct JsonError {

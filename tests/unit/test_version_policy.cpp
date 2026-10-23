@@ -20,15 +20,15 @@ VersionStatus status_of(const char* text) {
 
 }  // namespace
 
-TEST_CASE("version: 0.2.x is supported") {
-    for (const char* text : {"0.2.0", "0.2.1", "0.2.99", "0.2.4294967295"}) {
+TEST_CASE("version: 0.3.x is supported") {
+    for (const char* text : {"0.3.0", "0.3.1", "0.3.99", "0.3.4294967295"}) {
         CAPTURE(text);
         CHECK(status_of(text) == VersionStatus::Supported);
     }
 }
 
 TEST_CASE("version: every other 0.x is an unsupported pre-release") {
-    for (const char* text : {"0.0.0", "0.0.1", "0.1.0", "0.1.4", "0.3.0", "0.4.0", "0.10.0", "0.20.0", "0.12.0",
+    for (const char* text : {"0.0.0", "0.0.1", "0.1.0", "0.1.4", "0.2.0", "0.2.1", "0.4.0", "0.10.0", "0.20.0", "0.12.0",
                              "0.4294967295.0"}) {
         CAPTURE(text);
         CHECK(status_of(text) == VersionStatus::UnsupportedPreRelease);
@@ -55,7 +55,7 @@ TEST_CASE("version: events") {
     CHECK(sink.items()[0].kind == DiagnosticKind::UnsupportedVersion);
     CHECK(sink.items()[0].page_id.empty());
     CHECK(sink.items()[0].detail.find("0.1.4") != std::string::npos);
-    CHECK(sink.items()[0].detail.find("0.2.x") != std::string::npos);
+    CHECK(sink.items()[0].detail.find("0.3.x") != std::string::npos);
 
     report_version_event(newer, VersionStatus::NewerMajor, &sink);
     REQUIRE(sink.items().size() == 2);
@@ -69,8 +69,8 @@ TEST_CASE("version: reporting without a sink is allowed") {
 }
 
 TEST_CASE("version: the host decides about versions that are not supported") {
-    CHECK(check_version_policy({0, 2, 0}, VersionStatus::Supported, false).has_value());
-    CHECK(check_version_policy({0, 2, 0}, VersionStatus::Supported, true).has_value());
+    CHECK(check_version_policy({0, 3, 0}, VersionStatus::Supported, false).has_value());
+    CHECK(check_version_policy({0, 3, 0}, VersionStatus::Supported, true).has_value());
 
     for (VersionStatus status : {VersionStatus::UnsupportedPreRelease, VersionStatus::NewerMajor}) {
         const Version version = status == VersionStatus::NewerMajor ? Version{1, 0, 0} : Version{0, 1, 0};

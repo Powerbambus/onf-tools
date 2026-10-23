@@ -13,6 +13,9 @@ enum class DiagnosticKind {
     UnsupportedVersion,
     StrokesVersionMismatch,
     PageError,
+    MissingAsset,
+    CorruptAsset,
+    UnsupportedAssetFormat,
 };
 
 constexpr std::string_view diagnostic_spec_ref(DiagnosticKind kind) noexcept {
@@ -21,6 +24,9 @@ constexpr std::string_view diagnostic_spec_ref(DiagnosticKind kind) noexcept {
         case DiagnosticKind::UnsupportedVersion:     return "10.2";
         case DiagnosticKind::StrokesVersionMismatch: return "7.2";
         case DiagnosticKind::PageError:              return "12.3.1";
+        case DiagnosticKind::MissingAsset:           return "9.3.2";
+        case DiagnosticKind::CorruptAsset:           return "9.2.3";
+        case DiagnosticKind::UnsupportedAssetFormat: return "9.2.2";
     }
     return {};
 }
